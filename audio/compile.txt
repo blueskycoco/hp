@@ -1,0 +1,1 @@
+arm-linux-gcc audio.c -o audio -I/home/rdp/work/s3c6410-app/lib/include -L/home/rdp/work/s3c6410-app/lib/lib -lortp -lmediastreamer_base -lasound -lspeex -lspeexdsp -lmediastreamer_voip
