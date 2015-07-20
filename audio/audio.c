@@ -54,8 +54,9 @@ int main(int argc, char *argv[])
 	int i;
 	const char *alsadev=NULL;
 	ortp_init();
-	ortp_set_log_level_mask(ORTP_MESSAGE|ORTP_WARNING|ORTP_ERROR|ORTP_FATAL);
+	ortp_set_log_level_mask(/*ORTP_MESSAGE|ORTP_WARNING|*/ORTP_ERROR|ORTP_FATAL);
 	ms_init();
+	//ms_base_init();
 	signal(SIGINT,stop);
 
 	
