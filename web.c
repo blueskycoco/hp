@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>  
 #include <string.h>  
+#include "cJSON.h"
 
 #if 0
 //http get 
@@ -354,15 +355,45 @@ char * http_get(const char *url)
     return http_parse_result(lpbuf);  
 }  
 #endif
+void doit(char *text,const char *item_str)
+{
+	char *out;cJSON *json,*item_json;
+	
+	json=cJSON_Parse(text);
+	if (!json) {printf("Error before: [%s]\n",cJSON_GetErrorPtr());}
+	else
+	{
+		//out=cJSON_Print(json);
+		item_json = cJSON_GetObjectItem(json, item_str);
+		if (item_json)
+		{
+		    int nLen = strlen(item_json->valuestring);
+		    printf("%s ,%d %s\n",item_str,nLen,item_json->valuestring);
+		}
+		else
+			printf("get %s failed\n",item_str);
+		cJSON_Delete(json);
+		//printf("%s\n",out);
+		//free(out);
+	}
+}
+
+//get cmd http://101.200.236.69:8080/lamp/lamp/commond/wait?lampCode=aaaa
+//ack http://101.200.236.69:8080/lamp/lamp/commond/response?commondId=f1d51484-8daf-47a3-a490-f56461d3ce23&isSuccess=true
 int main(int argc,char *argv[])
 {
 	printf("Hello World\n");
-	char *rcv=http_get("http://101.200.236.69:8080/lamp/device/register?macAddress=xxxx");
+	char *rcv=http_get("http://101.200.236.69:8080/lamp/lamp/commond/wait?lampCode=aaaa");
 	printf("%s\n",rcv);
+	doit(rcv,"code");
 	free(rcv);
-	rcv=http_post("http://101.200.236.69:8080/lamp/device/register","macAddress=xxxx");
+	rcv=http_get("http://101.200.236.69:8080/lamp/lamp/commond/response?commondId=f1d51484-8daf-47a3-a490-f56461d3ce23&isSuccess=true");
 	printf("%s\n",rcv);
+	doit(rcv,"errorMsg");
 	free(rcv);
+	//rcv=http_post("http://101.200.236.69:8080/lamp/device/register","macAddress=xxxx");
+	//printf("%s\n",rcv);
+	//free(rcv);
 	return 0;
 	//return htpp_get(argc,argv);
 }
