@@ -11,6 +11,14 @@
 #include <errno.h>  
 #include <sys/msg.h>  
 #include <signal.h>
+#include "alsa/qisr.h"
+#include "alsa/msp_cmn.h"
+#include "alsa/msp_errors.h"
+
+
+
+#define MAX_KEYWORD_LEN 4096
+char GrammarID[128];
 struct msg_st  
 {  
 	long int msg_type;  
@@ -85,6 +93,124 @@ void rec(char *filename)
 		}  
 	}	
 }
+int run_asr(const char* asrfile ,  const char* param)
+{
+	char rec_result[1024*4] = {0};
+	const char *sessionID;
+	FILE *f_pcm = NULL;
+	char *pPCM = NULL;
+	int lastAudio = 0 ;
+	int audStat = 2 ;
+	int epStatus = 0;
+	int recStatus = 0 ;
+	long pcmCount = 0;
+	long pcmSize = 0;
+	int ret = 0 ;
+	sessionID = QISRSessionBegin(GrammarID, param, &ret); //asr
+	if(ret !=0)
+	{
+		printf("QISRSessionBegin Failed,ret=%d\n",ret);
+	}
+
+	f_pcm = fopen(asrfile, "rb");
+	if (NULL != f_pcm) {
+		fseek(f_pcm, 0, SEEK_END);
+		pcmSize = ftell(f_pcm);
+		fseek(f_pcm, 0, SEEK_SET);
+		pPCM = (char *)malloc(pcmSize);
+		fread((void *)pPCM, pcmSize, 1, f_pcm);
+		fclose(f_pcm);
+		f_pcm = NULL;
+	}
+	while (1) {
+		unsigned int len = 6400;
+              unsigned int audio_len = 6400;
+		if (pcmSize < 12800) {
+			len = pcmSize;
+			lastAudio = 1;
+		}
+		audStat = 2;
+		if (pcmCount == 0)
+			audStat = 1;
+		if (0) {
+			if (audStat == 1)
+				audStat = 5;
+			else
+				audStat = 4;
+		}
+		if (len<=0)
+		{
+			break;
+		}
+		printf("\ncsid=%s,count=%d,aus=%d,",sessionID,pcmCount/audio_len,audStat);
+		ret = QISRAudioWrite(sessionID, (const void *)&pPCM[pcmCount], len, audStat, &epStatus, &recStatus);
+		printf("eps=%d,rss=%d,ret=%d",epStatus,recStatus,ret);
+		if (ret != 0)
+			break;
+		pcmCount += (long)len;
+		pcmSize -= (long)len;
+		if (recStatus == 0) {
+			const char *rslt = QISRGetResult(sessionID, &recStatus, 0, &ret);
+			if (ret !=0)
+			{
+				printf("QISRGetResult Failed,ret=%d\n",ret);
+				break;
+			}
+			if (NULL != rslt)
+				strcat(rec_result,rslt);
+		}
+		if (epStatus == MSP_EP_AFTER_SPEECH)
+			break;
+		usleep(150000);
+	}
+	ret=QISRAudioWrite(sessionID, (const void *)NULL, 0, 4, &epStatus, &recStatus);
+	if (ret !=0)
+	{
+		printf("QISRAudioWrite Failed,ret=%d\n",ret);
+	}
+	free(pPCM);
+	pPCM = NULL;
+	while (recStatus != 5 && ret == 0) {
+		const char *rslt = QISRGetResult(sessionID, &recStatus, 0, &ret);
+		if (NULL != rslt)
+		{
+			strcat(rec_result,rslt);
+		}
+		usleep(150000);
+	}
+	ret=QISRSessionEnd(sessionID, NULL);
+	if(ret !=MSP_SUCCESS)
+	{
+		printf("QISRSessionEnd Failed, ret=%d\n",ret);
+	}
+	printf("\n=============================================================\n");
+	printf("The result is: %s\n",rec_result);
+	printf("=============================================================\n");
+	usleep(100000);
+}
+int get_from_server(char *file)
+{
+	const char* login_config = "appid = 55801297,work_dir =   .  ";
+	const char* param = "rst=plain,rse=utf8,sub=asr,aue=speex-wb,auf=audio/L16;rate=16000,ent=sms16k";    //注意sub=asr,16k音频aue=speex-wb，8k音频识别aue=speex，
+	int ret = 0 ;
+	char key = 0 ;
+	int grammar_flag = 0;//0:不上传词表；1：上传词表
+	ret = MSPLogin(NULL, NULL, login_config);
+	if ( ret != MSP_SUCCESS )
+	{
+		printf("MSPLogin failed , Error code %d.\n",ret);
+		return 0 ;
+	}
+	
+	strcpy(GrammarID, "e7eb1a443ee143d5e7ac52cb794810fe");
+ 	ret = run_asr(file, param);
+	if(ret != MSP_SUCCESS)
+	{
+		printf("run_asr with errorCode: %d \n", ret);
+		return 0;
+	}
+	MSPLogout();
+}
 int main(int argc, char *argv[])
 {
 
@@ -114,6 +240,7 @@ int main(int argc, char *argv[])
 		//father process
 		msgrcv(msgid, (void*)&data_r, 512, msgtype, 0);
 		printf("data_r id %d,text %s\n",data_r.msg_type,data_r.text);
+		get_from_server(data_r.text);
 	}
 	return 0;
 }
