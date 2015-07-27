@@ -1,6 +1,8 @@
 #include "mediastreamer2/msfilter.h"
 #include "mediastreamer2/mssndcard.h"
 #include "mediastreamer2/msticker.h"
+#include "mediastreamer2/msfileplayer.h"
+#include "mediastreamer2/msfilerec.h"
 #include <ortp/ortp.h>
 #include <unistd.h>  
 #include <stdlib.h>  
@@ -11,8 +13,8 @@
 #include <signal.h>
 struct msg_st  
 {  
-    long int msg_type;  
-    char text[512];  
+	long int msg_type;  
+	char text[512];  
 }; 
 void rec(char *filename)
 {
@@ -21,18 +23,18 @@ void rec(char *filename)
 	MSSndCard *card_playback1;
 	MSTicker *ticker1;
 	struct msg_st data_w;
-    long int msgtype = 0;
+	long int msgtype = 0;
 	char *capt_card1=NULL,*play_card1=NULL;
 	int rate = 8000;
 	int i;
 	const char *alsadev=NULL;
-	 msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
-    if(msgid == -1)  
-    {  
-        fprintf(stderr, "msgget failed with error: %d\n", errno);  
-        exit(-1);  
-    }  
-	
+	int  msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
+	if(msgid == -1)  
+	{  
+		fprintf(stderr, "msgget failed with error: %d\n", errno);  
+		exit(-1);  
+	}  
+
 	ortp_init();
 	ortp_set_log_level_mask(/*ORTP_MESSAGE|ORTP_WARNING|*/ORTP_ERROR|ORTP_FATAL);
 	ms_init();
@@ -42,15 +44,15 @@ void rec(char *filename)
 	if (card_playback1==NULL || card_capture1==NULL)
 	{
 		if(card_playback1==NULL)
-		ms_error("No card. card_playback1 %s",capt_card1);
+			ms_error("No card. card_playback1 %s",capt_card1);
 		if(card_capture1==NULL)
-		ms_error("No card. card_capture1 %s",capt_card1);
-		return -1;
+			ms_error("No card. card_capture1 %s",capt_card1);
+		//return -1;
 	}
 	else
 	{
 		ms_warning("card_playback1 %s|%s|%s|%d|%d|%d",card_playback1->name,card_playback1->id,card_playback1->desc->driver_type,
-			card_playback1->capabilities,card_playback1->latency,card_playback1->preferred_sample_rate);
+				card_playback1->capabilities,card_playback1->latency,card_playback1->preferred_sample_rate);
 	}
 	record=ms_filter_new(MS_FILE_REC_ID);
 	ms_filter_call_method(record,MS_FILE_REC_OPEN,(void*)filename);
@@ -74,38 +76,38 @@ void rec(char *filename)
 		if(f1_r) ms_filter_destroy(f1_r);
 		if(record) ms_filter_destroy(record);
 		data_w.msg_type = 1;    //注意2  
-        strcpy(data_w.text, filename);  
-        //向队列发送数据  
-        if(msgsnd(msgid, (void*)&data_w, 512, IPC_NOWAIT) == -1)  
-        {  
-            fprintf(stderr, "msgsnd failed\n");  
-            exit(1);  
-        }  
+		strcpy(data_w.text, filename);  
+		//向队列发送数据  
+		if(msgsnd(msgid, (void*)&data_w, 512, IPC_NOWAIT) == -1)  
+		{  
+			fprintf(stderr, "msgsnd failed\n");  
+			exit(1);  
+		}  
 	}	
 }
 int main(int argc, char *argv[])
 {
-	
+
 	pid_t fpid;	
 	int msgid = -1;  
-	signal(SIGINT,stop);
-    struct msg_st data_r;
-    long int msgtype = 1;
-  
-    //建立消息队列  
-    msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
-    if(msgid == -1)  
-    {  
-        fprintf(stderr, "msgget failed with error: %d\n", errno);  
-        exit(-1);  
-    }  
+	//signal(SIGINT,stop);
+	struct msg_st data_r;
+	long int msgtype = 1;
+
+	//建立消息队列  
+	msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
+	if(msgid == -1)  
+	{  
+		fprintf(stderr, "msgget failed with error: %d\n", errno);  
+		exit(-1);  
+	}  
 	fpid=fork();
 	if(fpid<0)
-		printf("fork failed\n"");
+		printf("fork failed\n");
 	else if(fpid==0)
 	{
-			//child process
-			rec((char *)arv[1]);
+		//child process
+		rec((char *)argv[1]);
 	}
 	else
 	{
