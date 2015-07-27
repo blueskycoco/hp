@@ -34,6 +34,7 @@ void rec(char *filename)
 	long int msgtype = 0;
 	char *capt_card1=NULL,*play_card1=NULL;
 	int rate = 8000;
+	int nchan=2;
 	int i;
 	const char *alsadev=NULL;
 	int  msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
@@ -44,7 +45,7 @@ void rec(char *filename)
 	}  
 
 	ortp_init();
-	ortp_set_log_level_mask(/*ORTP_MESSAGE|ORTP_WARNING|*/ORTP_ERROR|ORTP_FATAL);
+	ortp_set_log_level_mask(/*ORTP_MESSAGE|ORTP_WARNING|ORTP_ERROR|*/ORTP_FATAL);
 	ms_init();
 
 	card_capture1 = ms_snd_card_manager_get_default_capture_card(ms_snd_card_manager_get());
@@ -63,19 +64,26 @@ void rec(char *filename)
 				card_playback1->capabilities,card_playback1->latency,card_playback1->preferred_sample_rate);
 	}
 	record=ms_filter_new(MS_FILE_REC_ID);
-	ms_filter_call_method(record,MS_FILE_REC_OPEN,(void*)filename);
+	if(ms_filter_call_method(record,MS_FILE_REC_OPEN,(void*)filename)!=0)
+		printf("record open file %s failed\n",filename);
 	f1_r=ms_snd_card_create_reader(card_capture1);
 	//f1_w=ms_snd_card_create_writer(card_playback1);
 	if(f1_r!=NULL&&record!=NULL)
 	{
-		ms_filter_call_method (f1_r, MS_FILTER_SET_SAMPLE_RATE,	&rate);
-		//ms_filter_call_method (f1_w, MS_FILTER_SET_SAMPLE_RATE,	&rate);
-		ms_filter_call_method(record,MS_FILE_REC_START,NULL);
+		if(ms_filter_call_method(f1_r, MS_FILTER_SET_SAMPLE_RATE,	&rate)!=0)
+			printf("set sample rate f1_r failed\n");
+		if(ms_filter_call_method(record, MS_FILTER_SET_SAMPLE_RATE,&rate)!=0)
+			printf("set sample rate record failed\n");
+		if(ms_filter_call_method(f1_r, MS_FILTER_SET_NCHANNELS,	&nchan)!=0)
+			printf("set nchan f1_r failed\n");
+		if(ms_filter_call_method(record, MS_FILTER_SET_NCHANNELS,&nchan)!=0)
+			printf("set nchan record failed\n");
+		ms_filter_call_method_noarg(record,MS_FILE_REC_START);
 		ticker1=ms_ticker_new();
 		ms_ticker_set_name(ticker1,"card1 to card2");
 		ms_filter_link(f1_r,0,record,0);	 	
 		ms_ticker_attach(ticker1,f1_r);
-		ms_sleep(30);
+		ms_sleep(5);
 		ms_filter_call_method(record,MS_FILE_REC_STOP,NULL);
 		ms_filter_call_method(record,MS_FILE_REC_CLOSE,NULL);
 		if(ticker1) ms_ticker_detach(ticker1,f1_r);
@@ -187,6 +195,7 @@ int run_asr(const char* asrfile ,  const char* param)
 	printf("The result is: %s\n",rec_result);
 	printf("=============================================================\n");
 	usleep(100000);
+	return ret;
 }
 int get_from_server(char *file)
 {
