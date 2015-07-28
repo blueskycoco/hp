@@ -231,7 +231,7 @@ void play(const char *string,const char *filename)
 		printf("MSPLogin failed , Error code %d.\n",ret);
 	}
 	//“Ù∆µ∫œ≥…
-	ret = text_to_speech(text,filename,param);
+	ret = text_to_speech(string,filename,param);
 	if ( ret != MSP_SUCCESS )
 	{
 		printf("text_to_speech: failed , Error code %d.\n",ret);
@@ -391,7 +391,7 @@ int main(int argc, char *argv[])
 		msgrcv(msgid, (void*)&data_r, 512, msgtype, 0);
 		printf("data_r id %d,text %s\n",data_r.msg_type,data_r.text);
 		get_from_server(data_r.text);
-		play("tech","/tmp/3.wav");
+		play(argv[2],"/tmp/3.wav");
 	}
 	return 0;
 }
