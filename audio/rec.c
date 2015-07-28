@@ -220,11 +220,11 @@ void playback(char *filename)
 		data_w.msg_type = 2;	//注意2  
 		strcpy(data_w.text, filename);	
 		//向队列发送数据  
-		if(msgsnd(msgid, (void*)&data_w, 512, IPC_NOWAIT) == -1)  
-		{  
-			fprintf(stderr, "msgsnd failed\n");  
-			exit(1);  
-		}
+	//	if(msgsnd(msgid, (void*)&data_w, 512, IPC_NOWAIT) == -1)  
+	//	{  
+	//		fprintf(stderr, "msgsnd failed\n");  
+	//		exit(1);  
+	//	}
 		printf("playing finished\n");
 	}	
 }
@@ -537,6 +537,7 @@ int main(int argc, char *argv[])
 						play(data_r.text,"/tmp/3.wav");
 		playback("/tmp/3.wav");
 		 system("rm /tmp/rec.avi");
+//system("ipcs -q");
 }
 		waitpid(fpid, &status, 0);
 	}
