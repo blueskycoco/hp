@@ -142,6 +142,76 @@ void rec(char *filename)
 		}  
 	}	
 }
+static void fileplay_eof(void *user_data, MSFilter *f, unsigned int event, void *event_data) {
+	if (event == MS_FILE_PLAYER_EOF) {
+		int *done = (int *)user_data;
+		*done = TRUE;
+	}
+	MS_UNUSED(f), MS_UNUSED(event_data);
+}
+
+void playback(char *filename)
+{
+	MSFilter *f1_w,*play;
+	MSSndCard *card_playback1;
+	MSTicker *ticker1;
+	int i;
+	int done = FALSE;
+	struct msg_st data_w;
+	long int msgtype = 0;
+	int  msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
+	if(msgid == -1)  
+	{  
+		fprintf(stderr, "msgget failed with error: %d\n", errno);  
+		exit(-1);  
+	}  
+	ortp_init();
+	ortp_set_log_level_mask(/*ORTP_MESSAGE|ORTP_WARNING|ORTP_ERROR|*/ORTP_FATAL);
+	ms_init();
+
+	card_playback1 = ms_snd_card_manager_get_default_playback_card(ms_snd_card_manager_get());
+	if (card_playback1==NULL)
+	{
+		if(card_playback1==NULL)
+			ms_error("No card. card_playback");
+	}
+	else
+	{
+		ms_warning("card_playback1 %s|%s|%s|%d|%d|%d",card_playback1->name,card_playback1->id,card_playback1->desc->driver_type,
+				card_playback1->capabilities,card_playback1->latency,card_playback1->preferred_sample_rate);
+	}
+	play=ms_filter_new(MS_FILE_PLAYER_ID);
+	if(ms_filter_call_method(record,MS_FILE_PLAYER_OPEN,(void*)filename)!=0)
+		printf("play open file %s failed\n",filename);
+	ms_filter_set_notify_callback(play, fileplay_eof, &done);
+	f1_w=ms_snd_card_create_writer(card_playback1);
+	if(f1_w!=NULL&&play!=NULL)
+	{
+		ms_filter_call_method_noarg(record,MS_FILE_PLAYER_START);
+		ticker1=ms_ticker_new();
+		ms_ticker_set_name(ticker1,"card1 to card2");
+		ms_filter_link(play,0,f1_w,0);		
+		ms_ticker_attach(ticker1,play);
+		while (done != TRUE) {
+			ms_usleep(10000);
+		}
+		
+		ms_filter_call_method_noarg(play, MS_FILE_PLAYER_CLOSE);
+		if(ticker1) ms_ticker_detach(ticker1,play);
+		if(f1_w&&play) ms_filter_unlink(play,0,f1_w,0);
+		if(ticker1) ms_ticker_destroy(ticker1);
+		if(f1_w) ms_filter_destroy(f1_w);
+		if(play) ms_filter_destroy(play);
+		data_w.msg_type = 2;	//注意2  
+		strcpy(data_w.text, filename);	
+		//向队列发送数据  
+		if(msgsnd(msgid, (void*)&data_w, 512, IPC_NOWAIT) == -1)  
+		{  
+			fprintf(stderr, "msgsnd failed\n");  
+			exit(1);  
+		}  
+	}	
+}
 int text_to_speech(const char* src_text ,const char* des_path ,const char* params)
 {
 	struct wave_pcm_hdr pcmwavhdr = default_pcmwavhdr;
@@ -186,13 +256,13 @@ int text_to_speech(const char* src_text ,const char* des_path ,const char* param
 		const void *data = QTTSAudioGet(sess_id, &audio_len, &synth_status, &ret);
 		if (NULL != data)
 		{
-		   fwrite(data, audio_len, 1, fp);
-		   pcmwavhdr.data_size += audio_len;//修正pcm数据的大小
+			fwrite(data, audio_len, 1, fp);
+			pcmwavhdr.data_size += audio_len;//修正pcm数据的大小
 		}
-              printf("\nget audio...\n");
-              usleep(150000);//建议可以sleep下，因为只有云端有音频合成数据，audioget都能获取到音频。
+		printf("\nget audio...\n");
+		usleep(150000);//建议可以sleep下，因为只有云端有音频合成数据，audioget都能获取到音频。
 		if (synth_status == 2 || ret != 0) 
-		break;
+			break;
 	}
 
 	//修正pcm文件头数据的大小
@@ -208,9 +278,9 @@ int text_to_speech(const char* src_text ,const char* des_path ,const char* param
 	ret = QTTSSessionEnd(sess_id, NULL);
 	if ( ret != MSP_SUCCESS )
 	{
-	printf("QTTSSessionEnd: qtts end failed Error code %d.\n",ret);
+		printf("QTTSSessionEnd: qtts end failed Error code %d.\n",ret);
 	}
-       printf("\nTTS end...\n");
+	printf("\nTTS end...\n");
 	return ret;
 }
 
@@ -270,7 +340,7 @@ char *run_asr(const char* asrfile ,  const char* param)
 	}
 	while (1) {
 		unsigned int len = 6400;
-              unsigned int audio_len = 6400;
+		unsigned int audio_len = 6400;
 		if (pcmSize < 12800) {
 			len = pcmSize;
 			lastAudio = 1;
@@ -349,9 +419,9 @@ char *get_from_server(char *file)
 		printf("MSPLogin failed , Error code %d.\n",ret);
 		return 0 ;
 	}
-	
+
 	strcpy(GrammarID, "e7eb1a443ee143d5e7ac52cb794810fe");
- 	result = run_asr(file, param);
+	result = run_asr(file, param);
 	if(result == NULL)
 	{
 		printf("run_asr with errorCode: %d \n", ret);
@@ -392,6 +462,7 @@ int main(int argc, char *argv[])
 		printf("data_r id %d,text %s\n",data_r.msg_type,data_r.text);
 		get_from_server(data_r.text);
 		play(argv[2],"/tmp/3.wav");
+		playback("/tmp/3.wav");
 	}
 	return 0;
 }
