@@ -231,7 +231,7 @@ void play(const char *string,const char *filename)
 		printf("MSPLogin failed , Error code %d.\n",ret);
 	}
 	//音频合成
-	ret = text_to_speech(string,filename,param);
+	ret = text_to_speech(text,filename,param);
 	if ( ret != MSP_SUCCESS )
 	{
 		printf("text_to_speech: failed , Error code %d.\n",ret);
@@ -335,11 +335,12 @@ char *run_asr(const char* asrfile ,  const char* param)
 	usleep(100000);
 	return rec_result;
 }
-int get_from_server(char *file)
+char *get_from_server(char *file)
 {
 	const char* login_config = "appid = 55801297,work_dir =   .  ";
 	const char* param = "rst=plain,rse=utf8,sub=asr,aue=speex-wb,auf=audio/L16;rate=16000,ent=sms16k";    //注意sub=asr,16k音频aue=speex-wb，8k音频识别aue=speex，
 	int ret = 0 ;
+	char *result;
 	char key = 0 ;
 	int grammar_flag = 0;//0:不上传词表；1：上传词表
 	ret = MSPLogin(NULL, NULL, login_config);
@@ -350,13 +351,15 @@ int get_from_server(char *file)
 	}
 	
 	strcpy(GrammarID, "e7eb1a443ee143d5e7ac52cb794810fe");
- 	ret = run_asr(file, param);
-	if(ret != MSP_SUCCESS)
+ 	result = run_asr(file, param);
+	if(result == NULL)
 	{
 		printf("run_asr with errorCode: %d \n", ret);
+		MSPLogout();
 		return 0;
 	}
 	MSPLogout();
+	return result;
 }
 int main(int argc, char *argv[])
 {
@@ -387,8 +390,8 @@ int main(int argc, char *argv[])
 		//father process
 		msgrcv(msgid, (void*)&data_r, 512, msgtype, 0);
 		printf("data_r id %d,text %s\n",data_r.msg_type,data_r.text);
-		//get_from_server(data_r.text);
-		play(get_from_server(data_r.text),data_r.text);
+		get_from_server(data_r.text);
+		play("tech","/tmp/3.wav");
 	}
 	return 0;
 }
