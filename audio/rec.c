@@ -20,27 +20,27 @@
 typedef int SR_DWORD;
 typedef short int SR_WORD ;
 int cancle_rec=0;
-//ÒôÆµÍ·²¿¸ñÊ½
+//éŸ³é¢‘å¤´éƒ¨æ ¼å¼
 struct wave_pcm_hdr
 {
 	char            riff[4];                        // = "RIFF"
 	SR_DWORD        size_8;                         // = FileSize - 8
 	char            wave[4];                        // = "WAVE"
 	char            fmt[4];                         // = "fmt "
-	SR_DWORD        dwFmtSize;                      // = ÏÂÒ»¸ö½á¹¹ÌåµÄ´óĞ¡ : 16
+	SR_DWORD        dwFmtSize;                      // = ä¸‹ä¸€ä¸ªç»“æ„ä½“çš„å¤§å° : 16
 
 	SR_WORD         format_tag;              // = PCM : 1
-	SR_WORD         channels;                       // = Í¨µÀÊı : 1
-	SR_DWORD        samples_per_sec;        // = ²ÉÑùÂÊ : 8000 | 6000 | 11025 | 16000
-	SR_DWORD        avg_bytes_per_sec;      // = Ã¿Ãë×Ö½ÚÊı : dwSamplesPerSec * wBitsPerSample / 8
-	SR_WORD         block_align;            // = Ã¿²ÉÑùµã×Ö½ÚÊı : wBitsPerSample / 8
-	SR_WORD         bits_per_sample;         // = Á¿»¯±ÈÌØÊı: 8 | 16
+	SR_WORD         channels;                       // = é€šé“æ•° : 1
+	SR_DWORD        samples_per_sec;        // = é‡‡æ ·ç‡ : 8000 | 6000 | 11025 | 16000
+	SR_DWORD        avg_bytes_per_sec;      // = æ¯ç§’å­—èŠ‚æ•° : dwSamplesPerSec * wBitsPerSample / 8
+	SR_WORD         block_align;            // = æ¯é‡‡æ ·ç‚¹å­—èŠ‚æ•° : wBitsPerSample / 8
+	SR_WORD         bits_per_sample;         // = é‡åŒ–æ¯”ç‰¹æ•°: 8 | 16
 
 	char            data[4];                        // = "data";
-	SR_DWORD        data_size;                // = ´¿Êı¾İ³¤¶È : FileSize - 44 
+	SR_DWORD        data_size;                // = çº¯æ•°æ®é•¿åº¦ : FileSize - 44 
 } ;
 
-//Ä¬ÈÏÒôÆµÍ·²¿Êı¾İ
+//é»˜è®¤éŸ³é¢‘å¤´éƒ¨æ•°æ®
 struct wave_pcm_hdr default_pcmwavhdr = 
 {
 	{ 'R', 'I', 'F', 'F' },
@@ -58,6 +58,7 @@ struct wave_pcm_hdr default_pcmwavhdr =
 	0  
 };
 
+char *get_from_server(char *file);
 #define MAX_KEYWORD_LEN 4096
 char GrammarID[128];
 struct msg_st  
@@ -133,9 +134,9 @@ void rec(char *filename)
 		if(ticker1) ms_ticker_destroy(ticker1);
 		if(f1_r) ms_filter_destroy(f1_r);
 		if(record) ms_filter_destroy(record);		
-		data_w.msg_type = 1;    //×¢Òâ2  
+		data_w.msg_type = 1;    //æ³¨æ„2  
 		strcpy(data_w.text, get_from_server(filename));  
-		//Ïò¶ÓÁĞ·¢ËÍÊı¾İ  
+		//å‘é˜Ÿåˆ—å‘é€æ•°æ®  
 		if(msgsnd(msgid, (void*)&data_w, 512, IPC_NOWAIT) == -1)  
 		{  
 			fprintf(stderr, "msgsnd failed\n");  
@@ -203,9 +204,9 @@ void playback(char *filename)
 		if(ticker1) ms_ticker_destroy(ticker1);
 		if(f1_w) ms_filter_destroy(f1_w);
 		if(play) ms_filter_destroy(play);
-		data_w.msg_type = 2;	//×¢Òâ2  
+		data_w.msg_type = 2;	//æ³¨æ„2  
 		strcpy(data_w.text, filename);	
-		//Ïò¶ÓÁĞ·¢ËÍÊı¾İ  
+		//å‘é˜Ÿåˆ—å‘é€æ•°æ®  
 		if(msgsnd(msgid, (void*)&data_w, 512, IPC_NOWAIT) == -1)  
 		{  
 			fprintf(stderr, "msgsnd failed\n");  
@@ -256,10 +257,10 @@ int text_to_speech(const char* src_text ,const char* des_path ,const char* param
 		if (NULL != data)
 		{
 			fwrite(data, audio_len, 1, fp);
-			pcmwavhdr.data_size += audio_len;//ĞŞÕıpcmÊı¾İµÄ´óĞ¡
+			pcmwavhdr.data_size += audio_len;//ä¿®æ­£pcmæ•°æ®çš„å¤§å°
 		}
 		//printf("\nget audio...\n");
-		usleep(1500);//½¨Òé¿ÉÒÔsleepÏÂ£¬ÒòÎªÖ»ÓĞÔÆ¶ËÓĞÒôÆµºÏ³ÉÊı¾İ£¬audioget¶¼ÄÜ»ñÈ¡µ½ÒôÆµ¡£
+		usleep(1500);//å»ºè®®å¯ä»¥sleepä¸‹ï¼Œå› ä¸ºåªæœ‰äº‘ç«¯æœ‰éŸ³é¢‘åˆæˆæ•°æ®ï¼Œaudiogetéƒ½èƒ½è·å–åˆ°éŸ³é¢‘ã€‚
 		if (synth_status == 2 || ret != 0) 
 			break;
 	}
@@ -282,8 +283,8 @@ int text_to_speech(const char* src_text ,const char* des_path ,const char* param
 void play(const char *string,const char *filename)
 {
 	const char* login_configs = " appid = 55801297, work_dir =	 .	";
-	const char* text  = "¿Æ´óÑ¶·É×÷ÎªÖĞ¹ú×î´óµÄÖÇÄÜÓïÒô¼¼ÊõÌá¹©ÉÌ£¬ÔÚÖÇÄÜÓïÒô¼¼ÊõÁìÓòÓĞ×Å³¤ÆÚµÄÑĞ¾¿»ıÀÛ£¬²¢ÔÚÖĞÎÄÓïÒôºÏ³É¡¢ÓïÒôÊ¶±ğ¡¢¿ÚÓïÆÀ²âµÈ¶àÏî¼¼ÊõÉÏÓµÓĞ¹ú¼ÊÁìÏÈµÄ³É¹û¡£";
-	const char* param = "vcn=xiaoyan,aue = speex-wb,auf=audio/L16;rate=16000,spd = 5,vol = 5,tte = utf8";//8kÒôÆµºÏ³É²ÎÊı£ºaue=speex,auf=audio/L16;rate=8000,ÆäËû²ÎÊıÒâÒå²Î¿¼²ÎÊıÁĞ±í
+	const char* text  = "ç§‘å¤§è®¯é£ä½œä¸ºä¸­å›½æœ€å¤§çš„æ™ºèƒ½è¯­éŸ³æŠ€æœ¯æä¾›å•†ï¼Œåœ¨æ™ºèƒ½è¯­éŸ³æŠ€æœ¯é¢†åŸŸæœ‰ç€é•¿æœŸçš„ç ”ç©¶ç§¯ç´¯ï¼Œå¹¶åœ¨ä¸­æ–‡è¯­éŸ³åˆæˆã€è¯­éŸ³è¯†åˆ«ã€å£è¯­è¯„æµ‹ç­‰å¤šé¡¹æŠ€æœ¯ä¸Šæ‹¥æœ‰å›½é™…é¢†å…ˆçš„æˆæœã€‚";
+	const char* param = "vcn=xiaoyan,aue = speex-wb,auf=audio/L16;rate=16000,spd = 5,vol = 5,tte = utf8";//8kéŸ³é¢‘åˆæˆå‚æ•°ï¼šaue=speex,auf=audio/L16;rate=8000,å…¶ä»–å‚æ•°æ„ä¹‰å‚è€ƒå‚æ•°åˆ—è¡¨
 	int ret = 0;
 	char key = 0;
 
@@ -292,7 +293,7 @@ void play(const char *string,const char *filename)
 	{
 		printf("MSPLogin failed , Error code %d.\n",ret);
 	}
-	ret = text_to_speech(string,filename,param);
+	ret = text_to_speech(text,filename,param);
 	if ( ret != MSP_SUCCESS )
 	{
 		printf("text_to_speech: failed , Error code %d.\n",ret);
@@ -406,11 +407,11 @@ char *run_asr(const char* asrfile ,  const char* param)
 char *get_from_server(char *file)
 {
 	const char* login_config = "appid = 55801297,work_dir =   .  ";
-	const char* param = "rst=plain,rse=utf8,sub=asr,aue=speex-wb,auf=audio/L16;rate=16000,ent=sms16k";    //×¢Òâsub=asr,16kÒôÆµaue=speex-wb£¬8kÒôÆµÊ¶±ğaue=speex£¬
+	const char* param = "rst=plain,rse=utf8,sub=asr,aue=speex-wb,auf=audio/L16;rate=16000,ent=sms16k";    //æ³¨æ„sub=asr,16kéŸ³é¢‘aue=speex-wbï¼Œ8kéŸ³é¢‘è¯†åˆ«aue=speexï¼Œ
 	int ret = 0 ;
 	char *result;
 	char key = 0 ;
-	int grammar_flag = 0;//0:²»ÉÏ´«´Ê±í£»1£ºÉÏ´«´Ê±í
+	int grammar_flag = 0;//0:ä¸ä¸Šä¼ è¯è¡¨ï¼›1ï¼šä¸Šä¼ è¯è¡¨
 	ret = MSPLogin(NULL, NULL, login_config);
 	if ( ret != MSP_SUCCESS )
 	{
@@ -440,7 +441,10 @@ int main(int argc, char *argv[])
 	{  
 		fprintf(stderr, "msgget failed with error: %d\n", errno);  
 		exit(-1);  
-	}  
+	}
+play("eere","/tmp/3.wav");
+return 0;  
+  
 	fpid=fork();
 	if(fpid<0)
 		printf("fork failed\n");
@@ -469,7 +473,7 @@ int main(int argc, char *argv[])
 						msgtype=1;
 						msgrcv(msgid, (void*)&data_r, 512, msgtype, 0);
 						printf("data_r id %d,text %s\n",data_r.msg_type,data_r.text);
-						data_r.msg_type = 7;    //×¢Òâ2  
+						data_r.msg_type = 7;    //æ³¨æ„2  
 						if(msgsnd(msgid, (void*)&data_r, 512, IPC_NOWAIT) == -1)  
 						{  
 							fprintf(stderr, "msgsnd failed\n");  
