@@ -19,7 +19,7 @@
 
 typedef int SR_DWORD;
 typedef short int SR_WORD ;
-
+int cancle_rec=0;
 //音频头部格式
 struct wave_pcm_hdr
 {
@@ -124,16 +124,17 @@ void rec(char *filename)
 		ms_ticker_set_name(ticker1,"card1 to card2");
 		ms_filter_link(f1_r,0,record,0);	 	
 		ms_ticker_attach(ticker1,f1_r);
-		ms_sleep(2);
+		while(cancle_rec==0)
+		ms_sleep(1);
 		ms_filter_call_method(record,MS_FILE_REC_STOP,NULL);
 		ms_filter_call_method(record,MS_FILE_REC_CLOSE,NULL);
 		if(ticker1) ms_ticker_detach(ticker1,f1_r);
 		if(f1_r&&record) ms_filter_unlink(f1_r,0,record,0);
 		if(ticker1) ms_ticker_destroy(ticker1);
 		if(f1_r) ms_filter_destroy(f1_r);
-		if(record) ms_filter_destroy(record);
+		if(record) ms_filter_destroy(record);		
 		data_w.msg_type = 1;    //注意2  
-		strcpy(data_w.text, filename);  
+		strcpy(data_w.text, get_from_server(filename));  
 		//向队列发送数据  
 		if(msgsnd(msgid, (void*)&data_w, 512, IPC_NOWAIT) == -1)  
 		{  
@@ -209,7 +210,7 @@ void playback(char *filename)
 		{  
 			fprintf(stderr, "msgsnd failed\n");  
 			exit(1);  
-		}  
+		}
 	}	
 }
 int text_to_speech(const char* src_text ,const char* des_path ,const char* params)
@@ -432,12 +433,8 @@ int main(int argc, char *argv[])
 {
 
 	pid_t fpid;	
-	int msgid = -1;  
-	//signal(SIGINT,stop);
-	struct msg_st data_r;
-	long int msgtype = 1;
+	int msgid = -1;
 
-	//建立消息队列  
 	msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
 	if(msgid == -1)  
 	{  
@@ -449,15 +446,43 @@ int main(int argc, char *argv[])
 		printf("fork failed\n");
 	else if(fpid==0)
 	{
-		//child process
-		rec((char *)argv[1]);
+		//child process,capture audio when main process send start cmd, finish when receive stop cmd
+		rec((char *)argv[1]);		
+		long int msgtype = 8;//MAIN_TO_AUDIO 8
+		struct msg_st data_r;
+		while(1)
+		{
+			msgrcv(msgid, (void*)&data_r, 512, msgtype, 0);
+			printf("data_r id %d,text %s\n",data_r.msg_type,data_r.text);
+			switch (data_r.text[0])
+			{
+				case 0://start rec
+					{
+						cancle_rec=0;
+						if(fork()==0)
+						rec("/tmp/rec.avi");
+					}
+					break;
+				case 1://stop rec
+					{
+						cancle_rec=1;
+						msgtype=1;
+						msgrcv(msgid, (void*)&data_r, 512, msgtype, 0);
+						printf("data_r id %d,text %s\n",data_r.msg_type,data_r.text);
+						data_r.msg_type = 7;    //注意2  
+						if(msgsnd(msgid, (void*)&data_r, 512, IPC_NOWAIT) == -1)  
+						{  
+							fprintf(stderr, "msgsnd failed\n");  
+							exit(1);  
+						}  
+					}
+					break;
+			}
+		}
 	}
 	else
 	{
 		//father process
-		msgrcv(msgid, (void*)&data_r, 512, msgtype, 0);
-		printf("data_r id %d,text %s\n",data_r.msg_type,data_r.text);
-		get_from_server(data_r.text);
 		play(argv[2],"/tmp/3.wav");
 		playback("/tmp/3.wav");
 	}
