@@ -181,13 +181,13 @@ void playback(char *filename)
 				card_playback1->capabilities,card_playback1->latency,card_playback1->preferred_sample_rate);
 	}
 	play=ms_filter_new(MS_FILE_PLAYER_ID);
-	if(ms_filter_call_method(record,MS_FILE_PLAYER_OPEN,(void*)filename)!=0)
+	if(ms_filter_call_method(play,MS_FILE_PLAYER_OPEN,(void*)filename)!=0)
 		printf("play open file %s failed\n",filename);
 	ms_filter_set_notify_callback(play, fileplay_eof, &done);
 	f1_w=ms_snd_card_create_writer(card_playback1);
 	if(f1_w!=NULL&&play!=NULL)
 	{
-		ms_filter_call_method_noarg(record,MS_FILE_PLAYER_START);
+		ms_filter_call_method_noarg(play,MS_FILE_PLAYER_START);
 		ticker1=ms_ticker_new();
 		ms_ticker_set_name(ticker1,"card1 to card2");
 		ms_filter_link(play,0,f1_w,0);		
@@ -222,8 +222,6 @@ int text_to_speech(const char* src_text ,const char* des_path ,const char* param
 	unsigned int audio_len = 0;
 	int synth_status = 1;
 	FILE* fp = NULL;
-
-	printf("\nbegin to synth...\n");
 	if (NULL == src_text || NULL == des_path)
 	{
 		printf("params is null!\n");
@@ -259,16 +257,12 @@ int text_to_speech(const char* src_text ,const char* des_path ,const char* param
 			fwrite(data, audio_len, 1, fp);
 			pcmwavhdr.data_size += audio_len;//修正pcm数据的大小
 		}
-		printf("\nget audio...\n");
-		usleep(150000);//建议可以sleep下，因为只有云端有音频合成数据，audioget都能获取到音频。
+		//printf("\nget audio...\n");
+		usleep(1500);//建议可以sleep下，因为只有云端有音频合成数据，audioget都能获取到音频。
 		if (synth_status == 2 || ret != 0) 
 			break;
 	}
-
-	//修正pcm文件头数据的大小
 	pcmwavhdr.size_8 += pcmwavhdr.data_size + 36;
-
-	//将修正过的数据写回文件头部
 	fseek(fp, 4, 0);
 	fwrite(&pcmwavhdr.size_8,sizeof(pcmwavhdr.size_8), 1, fp);
 	fseek(fp, 40, 0);
@@ -280,33 +274,28 @@ int text_to_speech(const char* src_text ,const char* des_path ,const char* param
 	{
 		printf("QTTSSessionEnd: qtts end failed Error code %d.\n",ret);
 	}
-	printf("\nTTS end...\n");
+	//printf("\nTTS end...\n");
 	return ret;
 }
 
 void play(const char *string,const char *filename)
 {
-	///APPID请勿随意改动
 	const char* login_configs = " appid = 55801297, work_dir =	 .	";
 	const char* text  = "科大讯飞作为中国最大的智能语音技术提供商，在智能语音技术领域有着长期的研究积累，并在中文语音合成、语音识别、口语评测等多项技术上拥有国际领先的成果。";
-	//const char*  filename = "text_to_speech_test.wav";//因加wav音频头，生成的是wav音频，不加头，是pcm音频.
 	const char* param = "vcn=xiaoyan,aue = speex-wb,auf=audio/L16;rate=16000,spd = 5,vol = 5,tte = utf8";//8k音频合成参数：aue=speex,auf=audio/L16;rate=8000,其他参数意义参考参数列表
 	int ret = 0;
 	char key = 0;
 
-	//用户登录
 	ret = MSPLogin(NULL, NULL, login_configs);
 	if ( ret != MSP_SUCCESS )
 	{
 		printf("MSPLogin failed , Error code %d.\n",ret);
 	}
-	//音频合成
 	ret = text_to_speech(string,filename,param);
 	if ( ret != MSP_SUCCESS )
 	{
 		printf("text_to_speech: failed , Error code %d.\n",ret);
 	}
-	//退出登录
 	MSPLogout();
 }
 char *run_asr(const char* asrfile ,  const char* param)
@@ -327,82 +316,90 @@ char *run_asr(const char* asrfile ,  const char* param)
 	{
 		printf("QISRSessionBegin Failed,ret=%d\n",ret);
 	}
-
-	f_pcm = fopen(asrfile, "rb");
-	if (NULL != f_pcm) {
-		fseek(f_pcm, 0, SEEK_END);
-		pcmSize = ftell(f_pcm);
-		fseek(f_pcm, 0, SEEK_SET);
-		pPCM = (char *)malloc(pcmSize);
-		fread((void *)pPCM, pcmSize, 1, f_pcm);
-		fclose(f_pcm);
-		f_pcm = NULL;
-	}
-	while (1) {
-		unsigned int len = 6400;
-		unsigned int audio_len = 6400;
-		if (pcmSize < 12800) {
-			len = pcmSize;
-			lastAudio = 1;
-		}
-		audStat = 2;
-		if (pcmCount == 0)
-			audStat = 1;
-		if (0) {
-			if (audStat == 1)
-				audStat = 5;
-			else
-				audStat = 4;
-		}
-		if (len<=0)
+	else
+	{
+		f_pcm = fopen(asrfile, "rb");
+		if (NULL != f_pcm) 
 		{
-			break;
+			fseek(f_pcm, 0, SEEK_END);
+			pcmSize = ftell(f_pcm);
+			fseek(f_pcm, 0, SEEK_SET);
+			pPCM = (char *)malloc(pcmSize);
+			fread((void *)pPCM, pcmSize, 1, f_pcm);
+			fclose(f_pcm);
+			f_pcm = NULL;
 		}
-		printf("\ncsid=%s,count=%d,aus=%d,",sessionID,pcmCount/audio_len,audStat);
-		ret = QISRAudioWrite(sessionID, (const void *)&pPCM[pcmCount], len, audStat, &epStatus, &recStatus);
-		printf("eps=%d,rss=%d,ret=%d",epStatus,recStatus,ret);
-		if (ret != 0)
-			break;
-		pcmCount += (long)len;
-		pcmSize -= (long)len;
-		if (recStatus == 0) {
-			const char *rslt = QISRGetResult(sessionID, &recStatus, 0, &ret);
-			if (ret !=0)
+		while (1) 
+		{
+			unsigned int len = 6400;
+			unsigned int audio_len = 6400;
+			if (pcmSize < 12800) 
 			{
-				printf("QISRGetResult Failed,ret=%d\n",ret);
+				len = pcmSize;
+				lastAudio = 1;
+			}
+			audStat = 2;
+			if (pcmCount == 0)
+				audStat = 1;
+			if (0)
+			{
+				if (audStat == 1)
+					audStat = 5;
+				else
+					audStat = 4;
+			}
+			if (len<=0)
+			{
 				break;
 			}
-			if (NULL != rslt)
-				strcat(rec_result,rslt);
+			//printf("\ncsid=%s,count=%d,aus=%d,",sessionID,pcmCount/audio_len,audStat);
+			ret = QISRAudioWrite(sessionID, (const void *)&pPCM[pcmCount], len, audStat, &epStatus, &recStatus);
+			//printf("eps=%d,rss=%d,ret=%d",epStatus,recStatus,ret);
+			if (ret != 0)
+				break;
+			pcmCount += (long)len;
+			pcmSize -= (long)len;
+			if (recStatus == 0) 
+			{
+				const char *rslt = QISRGetResult(sessionID, &recStatus, 0, &ret);
+				if (ret !=0)
+				{
+					printf("QISRGetResult Failed,ret=%d\n",ret);
+					break;
+				}
+				if (NULL != rslt)
+					strcat(rec_result,rslt);
+			}
+			if (epStatus == MSP_EP_AFTER_SPEECH)
+				break;
+			usleep(150);
 		}
-		if (epStatus == MSP_EP_AFTER_SPEECH)
-			break;
-		usleep(150000);
-	}
-	ret=QISRAudioWrite(sessionID, (const void *)NULL, 0, 4, &epStatus, &recStatus);
-	if (ret !=0)
-	{
-		printf("QISRAudioWrite Failed,ret=%d\n",ret);
-	}
-	free(pPCM);
-	pPCM = NULL;
-	while (recStatus != 5 && ret == 0) {
-		const char *rslt = QISRGetResult(sessionID, &recStatus, 0, &ret);
-		if (NULL != rslt)
+		ret=QISRAudioWrite(sessionID, (const void *)NULL, 0, 4, &epStatus, &recStatus);
+		if (ret !=0)
 		{
-			strcat(rec_result,rslt);
+			printf("QISRAudioWrite Failed,ret=%d\n",ret);
 		}
-		usleep(150000);
+		free(pPCM);
+		pPCM = NULL;
+		while (recStatus != 5 && ret == 0) 
+		{
+			const char *rslt = QISRGetResult(sessionID, &recStatus, 0, &ret);
+			if (NULL != rslt)
+			{
+				strcat(rec_result,rslt);
+			}
+			usleep(150);
+		}
+		ret=QISRSessionEnd(sessionID, NULL);
+		if(ret !=MSP_SUCCESS)
+		{
+			printf("QISRSessionEnd Failed, ret=%d\n",ret);
+		}
+		printf("\n=============================================================\n");
+		printf("The result is: %s\n",rec_result);
+		printf("=============================================================\n");
+		//usleep(100000);
 	}
-	ret=QISRSessionEnd(sessionID, NULL);
-	if(ret !=MSP_SUCCESS)
-	{
-		printf("QISRSessionEnd Failed, ret=%d\n",ret);
-	}
-	printf("\n=============================================================\n");
-	printf("The result is: %s\n",rec_result);
-	printf("=============================================================\n");
-	usleep(100000);
 	return rec_result;
 }
 char *get_from_server(char *file)
@@ -419,16 +416,16 @@ char *get_from_server(char *file)
 		printf("MSPLogin failed , Error code %d.\n",ret);
 		return 0 ;
 	}
-
-	strcpy(GrammarID, "e7eb1a443ee143d5e7ac52cb794810fe");
-	result = run_asr(file, param);
-	if(result == NULL)
+	else
 	{
-		printf("run_asr with errorCode: %d \n", ret);
+		strcpy(GrammarID, "e7eb1a443ee143d5e7ac52cb794810fe");
+		result = run_asr(file, param);
+		if(result == NULL)
+		{
+			printf("run_asr with errorCode: %d \n", ret);
+		}
 		MSPLogout();
-		return 0;
 	}
-	MSPLogout();
 	return result;
 }
 int main(int argc, char *argv[])
