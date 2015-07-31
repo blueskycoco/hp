@@ -16,11 +16,12 @@
 #include "alsa/msp_errors.h"
 #include "alsa/qtts.h"
 
-
+//msgtype 8 MAIN_TO_AUDIO 
+//id 0 start record
+//id 1 stop record
 typedef int SR_DWORD;
 typedef short int SR_WORD ;
 int cancle_rec=0;
-//音频头部格式
 struct wave_pcm_hdr
 {
 	char            riff[4];                        // = "RIFF"
@@ -39,8 +40,6 @@ struct wave_pcm_hdr
 	char            data[4];                        // = "data";
 	SR_DWORD        data_size;                // = 纯数据长度 : FileSize - 44 
 } ;
-
-//默认音频头部数据
 struct wave_pcm_hdr default_pcmwavhdr = 
 {
 	{ 'R', 'I', 'F', 'F' },
@@ -63,7 +62,8 @@ char *get_from_server(char *file);
 char GrammarID[128];
 struct msg_st  
 {  
-	long int msg_type;  
+	long int msg_type; 
+	int id;
 	char text[512];  
 }; 
 void rec(char *filename)
@@ -109,7 +109,6 @@ void rec(char *filename)
 	if(ms_filter_call_method(record,MS_FILE_REC_OPEN,(void*)filename)!=0)
 		printf("record open file %s failed\n",filename);
 	f1_r=ms_snd_card_create_reader(card_capture1);
-	//f1_w=ms_snd_card_create_writer(card_playback1);
 	if(f1_r!=NULL&&record!=NULL)
 	{
 		if(ms_filter_call_method(f1_r, MS_FILTER_SET_SAMPLE_RATE,	&rate)!=0)
@@ -125,8 +124,15 @@ void rec(char *filename)
 		ms_ticker_set_name(ticker1,"card1 to card2");
 		ms_filter_link(f1_r,0,record,0);	 	
 		ms_ticker_attach(ticker1,f1_r);
-		msgtype=9;
-		msgrcv(msgid, (void*)&data_w, 512, msgtype, 0);
+		msgtype=8;
+		while(1)
+		{
+			msgrcv(msgid, (void*)&data_w, sizeof(struct msg_st)-sizeof(long int), msgtype, IPC_NOWAIT);
+			if(data_w.id==1)
+				break;
+			ms_sleep(1);
+		}
+
 		ms_filter_call_method(record,MS_FILE_REC_STOP,NULL);
 		ms_filter_call_method(record,MS_FILE_REC_CLOSE,NULL);
 		if(ticker1) ms_ticker_detach(ticker1,f1_r);
@@ -135,17 +141,17 @@ void rec(char *filename)
 		if(f1_r) ms_filter_destroy(f1_r);
 		if(record) ms_filter_destroy(record);		
 		printf("to get string from server\n");
-		data_w.msg_type = 7;    //注意2  
+		data_w.msg_type = 7;
+		data_w.id=0;
 		char *tmp=strrchr(get_from_server(filename),'=');
 		if(tmp==NULL)
-		strcpy(data_w.text,"can not find result from server");
+			strcpy(data_w.text,"can not find result from server");
 		else
-		strcpy(data_w.text, tmp+1);  
-		//向队列发送数据  
+			strcpy(data_w.text, tmp+1);  
 		if(msgsnd(msgid, (void*)&data_w, 512, IPC_NOWAIT) == -1)  
 		{  
 			fprintf(stderr, "msgsnd failed\n");  
-			exit(1);  
+			//exit(1);  
 		}  
 	}	
 }
@@ -210,7 +216,7 @@ void playback(char *filename)
 		while (done != TRUE) {
 			ms_usleep(10000);
 		}
-		
+
 		ms_filter_call_method_noarg(play, MS_FILE_PLAYER_CLOSE);
 		if(ticker1) ms_ticker_detach(ticker1,play);
 		if(f1_w&&play) ms_filter_unlink(play,0,f1_w,0);
@@ -220,11 +226,11 @@ void playback(char *filename)
 		data_w.msg_type = 2;	//注意2  
 		strcpy(data_w.text, filename);	
 		//向队列发送数据  
-	//	if(msgsnd(msgid, (void*)&data_w, 512, IPC_NOWAIT) == -1)  
-	//	{  
-	//		fprintf(stderr, "msgsnd failed\n");  
-	//		exit(1);  
-	//	}
+		//	if(msgsnd(msgid, (void*)&data_w, 512, IPC_NOWAIT) == -1)  
+		//	{  
+		//		fprintf(stderr, "msgsnd failed\n");  
+		//		exit(1);  
+		//	}
 		printf("playing finished\n");
 	}	
 }
@@ -412,9 +418,9 @@ char *run_asr(const char* asrfile ,  const char* param)
 		{
 			printf("QISRSessionEnd Failed, ret=%d\n",ret);
 		}
-		printf("\n=============================================================\n");
-		printf("The result is: %s\n",rec_result);
-		printf("=============================================================\n");
+		//printf("\n=============================================================\n");
+		//printf("The result is: %s\n",rec_result);
+		//printf("=============================================================\n");
 		//usleep(100000);
 	}
 	return rec_result;
@@ -457,7 +463,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "msgget failed with error: %d\n", errno);  
 		exit(-1);  
 	}
-  
+
 	fpid=fork();
 	if(fpid<0)
 		printf("fork failed\n");
@@ -467,37 +473,25 @@ int main(int argc, char *argv[])
 		//rec((char *)argv[1]);		
 		long int msgtype = 8;//MAIN_TO_AUDIO 8
 		struct msg_st data_r;
-	//	int msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
 		while(1)
 		{
 			printf("waiting audio capt cmd...\n");
 			msgrcv(msgid, (void*)&data_r, sizeof(struct msg_st)-sizeof(long int), msgtype, 0);
-			printf("data_r id %d,text %d\n",data_r.msg_type,data_r.text[0]);
-			switch (data_r.text[0])
+			printf("data_r id %d,text %d\n",data_r.msg_type,data_r.id);
+			switch (data_r.id)
 			{
 				case 0://start rec
-					{
-						cancle_rec=0;
-						if(fork()==0)
-						{	
-							rec("/tmp/rec.avi");
-							exit(0);
-						}	
-					}
-					break;
-				case 1://stop rec
-					{
-						cancle_rec=1;
-						msgtype=1;
-						msgrcv(msgid, (void*)&data_r, 512, msgtype, 0);
-						printf("data_r id %d,text %s\n",data_r.msg_type,data_r.text);
-						data_r.msg_type = 7;    //注意2  
-						if(msgsnd(msgid, (void*)&data_r, 512, IPC_NOWAIT) == -1)  
-						{  
-							fprintf(stderr, "msgsnd failed\n");  
-							exit(1);  
-						}  
-					}
+				{
+					rec("/tmp/rec.avi");
+				}
+				break;
+				case 2://start transfer string and play
+				{
+					play(data_r.text,"/tmp/3.wav");
+					playback("/tmp/3.wav");
+				}
+				break;
+				default:
 					break;
 			}
 		}
@@ -505,40 +499,46 @@ int main(int argc, char *argv[])
 	else
 	{
 		//father process
-		//play(argv[2],"/tmp/3.wav");
-		//playback("/tmp/3.wav");
 		long int msgtype = 8;//MAIN_TO_AUDIO 8
 		struct msg_st data_r;
 		int status;
-		while(1){
-		ms_sleep(2);
-						data_r.msg_type = 8;    //注意2  
-						data_r.text[0]=0;
-		printf("start record\n");
-						if(msgsnd(msgid, (void*)&data_r, sizeof(struct msg_st)-sizeof(long int), IPC_NOWAIT) == -1)  
-						{  
-							fprintf(stderr, "msgsnd failed %s msgid %d\n",strerror(errno),msgid);  
-							exit(1);  
-						}  
-		ms_sleep(3);
-						data_r.msg_type = 9;    //注意2
-						data_r.text[0]=1;  
-		printf("stop record\n");
-						if(msgsnd(msgid, (void*)&data_r, sizeof(struct msg_st)-sizeof(long int), IPC_NOWAIT) == -1)  
-						{  
-							fprintf(stderr, "msgsnd failed %s\n",strerror(errno));  
-							exit(1);  
-						} 
-		printf("waiting message 7\n"); 
-						msgtype=7;
-						msgrcv(msgid, (void*)&data_r, 512, msgtype, 0);
-								
-		printf("main process exit %s\n",data_r.text);
-						play(data_r.text,"/tmp/3.wav");
-		playback("/tmp/3.wav");
-		 system("rm /tmp/rec.avi");
-//system("ipcs -q");
-}
+		while(1)
+		{
+			ms_sleep(2);
+			data_r.msg_type = 8;
+			data_r.id=0;
+			printf("start record\n");
+			if(msgsnd(msgid, (void*)&data_r, sizeof(struct msg_st)-sizeof(long int), IPC_NOWAIT) == -1)  
+			{  
+				fprintf(stderr, "msgsnd failed %s msgid %d\n",strerror(errno),msgid);  
+				exit(1);  
+			}  
+			ms_sleep(3);
+			data_r.msg_type = 8;
+			data_r.id=1;  
+			printf("stop record\n");
+			if(msgsnd(msgid, (void*)&data_r, sizeof(struct msg_st)-sizeof(long int), IPC_NOWAIT) == -1)  
+			{  
+				fprintf(stderr, "msgsnd failed %s\n",strerror(errno));  
+				exit(1);  
+			} 
+			printf("waiting message 7\n"); 
+			msgtype=7;
+			msgrcv(msgid, (void*)&data_r, sizeof(struct msg_st)-sizeof(long int), msgtype, 0);
+
+			printf("Get Result %s\n",data_r.text);
+			
+			data_r.msg_type = 8;    //注意2
+			data_r.id=2;  
+			printf("start transfer and playback\n");
+			if(msgsnd(msgid, (void*)&data_r, sizeof(struct msg_st)-sizeof(long int), IPC_NOWAIT) == -1)  
+			{  
+				fprintf(stderr, "msgsnd failed %s\n",strerror(errno));  
+				exit(1);  
+			}
+			system("rm /tmp/rec.avi");
+			//system("ipcs -q");
+		}
 		waitpid(fpid, &status, 0);
 	}
 	return 0;
