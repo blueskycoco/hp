@@ -22,7 +22,7 @@ int run_asr(const char* asrfile ,  const char* param, unsigned char **rec_result
 	if(ret !=0)
 	{
 		printf(LOG_PREFX"QISRSessionBegin Failed,ret=%d\n",ret);
-		result=0;
+		result=1;
 	}
 	else
 	{
@@ -116,9 +116,10 @@ int run_asr(const char* asrfile ,  const char* param, unsigned char **rec_result
 		if(ret !=MSP_SUCCESS)
 		{
 			printf(LOG_PREFX"QISRSessionEnd Failed, ret=%d\n",ret);
-			result=0;
+			result=1;
 		}
 	}
+	printf(LOG_PREFX"result %s\n",*rec_result);
 	return result;
 }
 
@@ -132,13 +133,13 @@ int get_from_server(char *file,unsigned char **rec_result)
 	if ( ret != MSP_SUCCESS )
 	{
 		printf(LOG_PREFX"MSPLogin failed , Error code %d.\n",ret);
-		return 0 ;
+		return 1 ;
 	}
 	else
 	{
 		strcpy(GrammarID, "e7eb1a443ee143d5e7ac52cb794810fe");
 		result = run_asr(file, param, rec_result);
-		if(result == 0)
+		if(result == 1)
 		{
 			printf(LOG_PREFX"run_asr with errorCode: %d \n", ret);
 		}
@@ -419,9 +420,9 @@ int main(int argc, char *argv[])
 	else
 		strcpy(record_file,argv[1]);
 	if(argv[2]==NULL)
-		strcpy(record_file,"/tmp/3.wav");
+		strcpy(playback_file,"/tmp/3.wav");
 	else
-		strcpy(record_file,argv[2]);
+		strcpy(playback_file,argv[2]);
 	while(1)
 	{		
 		static int audio_system_state=STATE_NULL;
@@ -464,16 +465,18 @@ int main(int argc, char *argv[])
 							if(!(audio_system_state&STATE_STOP_RECORD)&&(audio_system_state&STATE_START_RECORD))
 							{
 								send_msg(msgid,TYPE_LOCAL_STOP_RECORD,0,NULL);
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_RECORD_STOP);
-								ms_sleep(100);
-								if((fpid=fork())==0)
+								ms_sleep(1);
+								//if((fpid=fork())==0)
 								{
 									get_from_server(record_file,&rec_result);
 									if(rec_result!=NULL)
 									{
 										char *tmp=strrchr(rec_result,'=');
 										if(tmp!=NULL)
+										{
 											strcpy(res,tmp+1);
+											printf(LOG_PREFX"res %s\n",res);
+										}
 										else
 											memset(res,'\0',256);
 										free(rec_result);
@@ -485,24 +488,22 @@ int main(int argc, char *argv[])
 									system(cmd);
 									audio_system_state|=STATE_STOP_RECORD;
 									audio_system_state&=~STATE_START_RECORD;
-									exit(0);
+									//exit(0);
 								}
+								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_RECORD_STOP);
 							}
 							else
 							{
 								strcat(err_msg,"already in stoped ...");
 								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
 							}
-							char cmd[256];
-							strcpy(cmd,"rm ");
-							strcat(cmd,record_file);
-							system(cmd);
 						}
 						break;
 						case CMD_CHECK_RECORD:
 						{
 							char result[256]={0};
 							strcpy(result,ACK_XF_RECORD_RESULT);
+							printf(LOG_PREFX"res is %s\n",res);
 							if(strlen(res)!=0)
 								strcat(result,res);
 							else
@@ -530,9 +531,9 @@ int main(int argc, char *argv[])
 							audio_system_state|=STATE_PLAYBACK_LOCAL_BEGIN;
 							audio_system_state&=~STATE_PLAYBACK_LOCAL_END;							
 							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_START);
-							if((fpid=fork())==0)
+							//if((fpid=fork())==0)
 							{
-								if(playback(play_file)==0)
+								if(playback(play_file)==1)
 									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_STOP);
 								else
 								{
@@ -573,12 +574,12 @@ int main(int argc, char *argv[])
 							audio_system_state|=STATE_XF_PLAYBACK_BEGIN;
 							audio_system_state&=~STATE_XF_PLAYBACK_END;							
 							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_START);
-							if((fpid=fork())==0)
+							//if((fpid=fork())==0)
 							{
 								if(play(audio_string,playback_file)==0)
 								{
 									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_STOP);
-									if(playback(playback_file)==0)
+									if(playback(playback_file)==1)
 										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_OK);
 									else
 									{
