@@ -415,6 +415,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, LOG_PREFX"msgget failed with error: %d\n", errno);  
 		exit(-1);  
 	}
+	else
+	printf(LOG_PREFX"msgid %d\n",msgid);			
+	
 	if(argv[1]==NULL)
 		strcpy(record_file,"/tmp/rec.wav");
 	else
@@ -428,7 +431,8 @@ int main(int argc, char *argv[])
 		static int audio_system_state=STATE_NULL;
 		char err_msg[256]={0};
 		printf(LOG_PREFX"waiting MainCtlSystem cmd...\n");
-		msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_AUDIO , 0);
+		if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_AUDIO , 0)>=0)
+		{
 		printf(LOG_PREFX"msgtype %d ,data id %d,text %s\n",data.msg_type,data.id,data.text);
 		if(data.id==MAIN_TO_AUDIO)
 		{
@@ -547,8 +551,10 @@ int main(int argc, char *argv[])
 						}
 						else
 						{
-							strcat(err_msg,"filename is null");
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
+							if(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)
+								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_START);
+							else
+								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_STOP);
 						}
 						
 					}
@@ -617,6 +623,19 @@ int main(int argc, char *argv[])
 				default:
 					break;
 			}
+		}
+		}
+		else
+		{
+			msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
+			if(msgid == -1)  
+			{  
+				fprintf(stderr, LOG_PREFX"msgget failed with error: %d\n", errno);  
+				//exit(-1);  
+			}
+			else
+			printf(LOG_PREFX"msgid %d\n",msgid);			
+			ms_sleep(1);
 		}
 	}
 	waitpid(fpid, &status, 0);
