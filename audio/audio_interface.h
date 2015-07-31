@@ -23,6 +23,14 @@ typedef short int SR_WORD ;
 
 #define MAIN_TO_AUDIO 					0x0d
 #define AUDIO_TO_MAIN 					0x0e
+#define STATE_START_RECORD 				1
+#define STATE_STOP_RECORD 				2
+#define STATE_PLAYBACK_LOCAL_BEGIN 		4
+#define STATE_PLAYBACK_LOCAL_END 		8
+#define STATE_XF_PLAYBACK_BEGIN 		16
+#define STATE_XF_PLAYBACK_END	 		32
+#define STATE_NULL						0
+
 #define PROC_RECORD 					'c'
 #define PROC_PLAYBACK 					'b'
 #define XF_PLAYBACK 					'd'
@@ -46,9 +54,9 @@ typedef short int SR_WORD ;
 #define STATUS_XF_PLAYBACK_OK 			'3'
 #define STATUS_XF_PLAYBACK_FAILED 		'4'
 
-#define CMD_START_RECORD				"c;1"
-#define CMD_STOP_RECORD					"c;0"
-#define CMD_CHECK_RECORD				"c;2"
+//#define CMD_START_RECORD				"c;1"
+//#define CMD_STOP_RECORD					"c;0"
+//#define CMD_CHECK_RECORD				"c;2"
 #define CMD_PLAYBACK_LOCAL_FILE			"b;"
 #define CMD_PLAYBACK_LOCAL_CHECK		"b;"
 #define CMD_XF_PLAYBACK_START			"d;"
