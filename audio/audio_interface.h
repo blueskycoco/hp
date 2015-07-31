@@ -46,6 +46,13 @@ typedef short int SR_WORD ;
 #define STATUS_XF_PLAYBACK_OK 			'3'
 #define STATUS_XF_PLAYBACK_FAILED 		'4'
 
+#define CMD_START_RECORD				"c;1"
+#define CMD_STOP_RECORD					"c;0"
+#define CMD_CHECK_RECORD				"c;2"
+#define CMD_PLAYBACK_LOCAL_FILE			"b;"
+#define CMD_PLAYBACK_LOCAL_CHECK		"b;"
+#define CMD_XF_PLAYBACK_START			"d;"
+
 #define ACK_RECORD_STOP 				"s;0"
 #define ACK_RECORD_START 				"s;1"
 #define ACK_XF_RECORD_RESULT			"r;"
@@ -57,7 +64,7 @@ typedef short int SR_WORD ;
 #define ACK_PLAYBACK_XF_UNDO 			"d;0"
 #define ACK_PLAYBACK_XF_OK 				"d;3"
 #define ACK_PLAYBACK_XF_FAILED 			"d;4"
-
+#define LOG_PREFX						"[AudioSubSystem]:"
 #define XXX_OFS 0
 #define YYY_OFS 2
 struct wave_pcm_hdr
