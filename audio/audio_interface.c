@@ -153,7 +153,7 @@ void rec(int msgid,char *filename)
 	MSSndCard *card_capture1;
 	MSSndCard *card_playback1;
 	MSTicker *ticker1;
-	struct msg_st *data;
+	struct msg_st data;
 	long int msgtype = 0;
 	char *capt_card1=NULL,*play_card1=NULL;
 	int rate = 8000;
@@ -202,9 +202,7 @@ void rec(int msgid,char *filename)
 		ms_ticker_set_name(ticker1,"card1 to card2");
 		ms_filter_link(f1_r,0,record,0);	 	
 		ms_ticker_attach(ticker1,f1_r);
-		msgrcv(msgid, (void*)data, sizeof(struct msg_st)-sizeof(long int), TYPE_LOCAL_STOP_RECORD, 0);
-		if(data)
-			free(data);
+		msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_LOCAL_STOP_RECORD, 0);
 		g_audio_state=STATUS_START_RECORD;
 
 		ms_filter_call_method(record,MS_FILE_REC_STOP,NULL);
