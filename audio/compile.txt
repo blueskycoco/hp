@@ -1,3 +1,4 @@
 arm-linux-gcc audio.c -o audio -I/home/rdp/work/s3c6410-app/lib/include -L/home/rdp/work/s3c6410-app/lib/lib -lortp -lmediastreamer_base -lasound -lspeex -lspeexdsp -lmediastreamer_voip
 arm-linux-gcc audio.c -o audio -Ilib/include -Llib/lib -lortp -lmediastreamer_base -lasound -lspeex -lspeexdsp -lmediastreamer_voip
 ../../opt/FriendlyARM/toolschain/4.5.1/bin/arm-linux-gcc rec.c -o rec -Ilib/include -Llib/lib -lortp -lmediastreamer_base -lasound -lspeex -lspeexdsp -lmediastreamer_voip -lmsc
+../opt/FriendlyARM/toolschain/4.5.1/bin/arm-linux-gcc upload.c -o upload -I../du/audio/lib/include -L../du/audio/lib/lib -lmsc -ldl -lpthread -lrt

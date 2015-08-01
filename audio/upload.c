@@ -17,25 +17,38 @@ int main(int argc, char *argv[])
 	const char* testID = NULL;
 	char GrammarID[128];
 	FILE *fp = NULL;
+	const char* login_config = "appid = 55801297,work_dir =   .  ";
+	//const char* login_config = "appid = 55ae095e,work_dir =   .  ";
+	const char* param = "rst=plain,rse=utf8,sub=asr,aue=speex-wb,auf=audio/L16;rate=16000,ent=sms16k";    //注意sub=asr,16k音频aue=speex-wb，8k音频识别aue=speex，
 	memset(UserData, 0, MAX_KEYWORD_LEN);
 	if(argv[1]==NULL)
 	{
 		printf("please set argv[1] to your keywords file\n");
 		return 0;
 	}
-	fp = fopen(argv[1], "rb");
-	if (fp == NULL)
+	ret = MSPLogin(NULL, NULL, login_config);
+	if ( ret != MSP_SUCCESS )
 	{
-		printf("keyword file cannot open\n");
-		return -1;
+		printf("MSPLogin failed , Error code %d.\n",ret);
+		return 0 ;
 	}
-	len = (unsigned int)fread(UserData, 1, MAX_KEYWORD_LEN, fp);
-	UserData[len] = 0;
-	fclose(fp);
-       testID = MSPUploadData("userword", UserData, len, "dtt = userword, sub = asr", &ret);
+	else
+	{
+		fp = fopen(argv[1], "rb");
+		if (fp == NULL)
+		{
+			printf("keyword file cannot open\n");
+			return -1;
+		}
+		len = (unsigned int)fread(UserData, 1, MAX_KEYWORD_LEN, fp);
+		UserData[len] = 0;
+		fclose(fp);
+		testID = MSPUploadData("userword", UserData, len, "dtt = userword, sub = asr", &ret);
+	}
+	MSPLogout();
 	if(ret != MSP_SUCCESS)
 	{
-		printf("UploadData with errorCode: %d \n", ret);
+		printf("UploadData with errorCode: %d len %d\n", ret,len);
 		return ret;
 	}
 	memcpy((void*)GrammarID, testID, strlen(testID));
