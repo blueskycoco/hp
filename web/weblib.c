@@ -11,7 +11,8 @@
 #include <netdb.h>  
 #include <string.h>  
 #include "cJSON.h"
-
+#include <errno.h>
+#include "weblib.h"
 #if 0
 //http get 
 #define HOST "www.baidu.com"  
@@ -44,7 +45,7 @@ char *get_ip(char *host){
     return ip;  
 }  
 void usage(){  
-    fprintf(stderr,"USAGE:htmlget host [page]\n\thost:the website hostname. ex:www.baidu.com\n\tpage:the page to retrieve. ex:index.html,default:/\n");  
+    fprintf(LOG_PREFXstderr,"USAGE:htmlget host [page]\n\thost:the website hostname. ex:www.baidu.com\n\tpage:the page to retrieve. ex:index.html,default:/\n");  
 }  
 int create_tcp_socket(){  
     int sock;  
@@ -76,10 +77,10 @@ int htpp_get(int argc,char *argv[])
     }else{  
         page=PAGE;  
     }  
-    fprintf(stdout,"page:%s,hostName:%s\n",page,host);  
+    fprintf(LOG_PREFXstdout,"page:%s,hostName:%s\n",page,host);  
     sock=create_tcp_socket();  
     ip=argv[1];//get_ip(host);  
-    fprintf(stderr,"IP is %s\n",ip);  
+    fprintf(LOG_PREFXstderr,"IP is %s\n",ip);  
     remote=(struct sockaddr_in *)malloc(sizeof(struct sockaddr_in*));  
     remote->sin_family=AF_INET;  
     tmpres=inet_pton(AF_INET,ip,(void *)(&(remote->sin_addr.s_addr)));  
@@ -87,7 +88,7 @@ int htpp_get(int argc,char *argv[])
         perror("Can't set remote->sin_addr.s_addr");  
         exit(1);  
     }else if(tmpres==0){  
-        fprintf(stderr,"%s is not a valid IP address\n",ip);  
+        fprintf(LOG_PREFXstderr,"%s is not a valid IP address\n",ip);  
         exit(1);  
     }  
     remote->sin_port=htons(PORT);  
@@ -96,7 +97,7 @@ int htpp_get(int argc,char *argv[])
         exit(1);  
     }  
     get =build_get_query(host,page);  
-    fprintf(stdout,"<start>\n%s\n<end>\n",get);  
+    fprintf(LOG_PREFXstdout,"<start>\n%s\n<end>\n",get);  
     int sent=0;  
     while(sent<strlen(get)){  
         tmpres=send(sock,get+sent,strlen(get)-sent,0);  
@@ -120,12 +121,12 @@ int htpp_get(int argc,char *argv[])
             htmlcontent=buf;  
         }  
         if(htmlstart){  
-            fprintf(stdout,"%s",htmlcontent);  
+            fprintf(LOG_PREFXstdout,"%s",htmlcontent);  
         }  
         memset(buf,0,tmpres);  
-       // fprintf(stdout,"\n\n\ntmpres Value:%d\n",tmpres);  
+       // fprintf(LOG_PREFXstdout,"\n\n\ntmpres Value:%d\n",tmpres);  
     }  
-    fprintf(stdout,"\nreceive data over!\n");  
+    fprintf(LOG_PREFXstdout,"\nreceive data over!\n");  
     if(tmpres<0){  
         perror("Error receiving data!\n");  
     }  
@@ -137,17 +138,24 @@ int htpp_get(int argc,char *argv[])
 }
 #else
 #define BUFFER_SIZE 1024  
-#define HTTP_POST "POST /%s HTTP/1.1\r\nHOST: %s:%d\r\nAccept: */*\r\n"\  
+#define HTTP_POST "POST /%s HTTP/1.1\r\nHOST: %s:%d\r\nAccept: */*\r\n"\
     "Content-Type:application/x-www-form-urlencoded\r\nContent-Length: %d\r\n\r\n%s"  
 #define HTTP_GET "GET /%s HTTP/1.1\r\nHOST: %s:%d\r\nAccept: */*\r\n\r\n"  
 #define MY_HTTP_DEFAULT_PORT 8080  
   
-static int http_tcpclient_create(const char *host, int port){  
+static int http_tcpclient_create(const char *host, int port,int timeout){  
     struct hostent *he;  
     struct sockaddr_in server_addr;   
-    int socket_fd;  
-  
+    int socket_fd; 
+	socklen_t lon; 
+	int error;
+	fd_set rset, wset;
+	unsigned int len;
+	struct timeval tv; 
+	int valopt,ret; 
+  	int imode=1,i=0;
     if((he = gethostbyname(host))==NULL){  
+		printf(LOG_PREFX"gethostbyname failed\n");
         return -1;  
     }  
   
@@ -158,11 +166,114 @@ static int http_tcpclient_create(const char *host, int port){
     if((socket_fd = socket(AF_INET,SOCK_STREAM,0))==-1){  
         return -1;  
     }  
-  
-    if(connect(socket_fd, (struct sockaddr *)&server_addr,sizeof(struct sockaddr)) == -1){  
-        return -1;  
-    }  
-  
+	tv.tv_usec=0;
+	tv.tv_sec = timeout;
+
+   	fcntl(socket_fd, F_SETFL, O_NONBLOCK);
+	if(connect(socket_fd, (struct sockaddr *)&server_addr,sizeof(struct sockaddr)) <0)
+	{
+		if(errno!=EINPROGRESS)
+		{
+			printf(LOG_PREFX"connect failed\n");
+			close(socket_fd);
+			return -1;
+		}
+	}
+	else
+	{
+		fcntl(socket_fd, F_SETFL, 0);
+		return socket_fd;
+	}
+
+	
+	/* in progress */
+	FD_ZERO(&rset);
+	FD_SET(socket_fd, &rset);
+	wset = rset;
+
+	ret = select(socket_fd + 1, &rset, &wset, NULL, &tv);
+	if (ret == 0) {
+	   /* no readable or writable socket, timeout */
+	   close(socket_fd);
+	   errno = ETIMEDOUT;
+	   printf(LOG_PREFX"Error no readable or writable socket, timeout\n");
+	   return -1;
+	}
+	else if (ret < 0) {
+	   /* select error */
+	   close(socket_fd);
+	   printf(LOG_PREFX"Error select error\n");
+	   return -1;
+	}
+
+	if (FD_ISSET(socket_fd, &rset) || FD_ISSET(socket_fd, &wset)) {
+	   /* check is there any error */
+	   len = sizeof(error);
+	   getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &error, &len);
+	}
+
+	if (error) {
+	   /* connect error */
+	   close(socket_fd);
+	   errno = error;
+	   printf(LOG_PREFX"Error %s\n",strerror(errno));
+	   return -1;
+	}
+	/*
+	ioctl(socket_fd, FIONBIO, &imode);
+	while(i<timeout)
+	{
+		FD_ZERO(&myset);
+		FD_SET(socket_fd, &myset);
+		if(select(socket_fd+1,  0,&myset, 0, &tv) > 0 )
+		{
+		    if(connect(socket_fd, (struct sockaddr *)&server_addr,sizeof(struct sockaddr)) == -1)
+			{
+				if(errno==EINPROGRESS)
+				{
+
+					FD_ZERO(&myset); 
+					FD_SET(socket_fd, &myset);
+					if(select(socket_fd+1, NULL, &myset, NULL, &tv) > 0) 
+					{ 
+						if(FD_ISSET(socket_fd,&myset))
+						{
+							lon = sizeof(int); 
+							getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon); 
+							if(!valopt) 
+							{ 
+								printf(LOG_PREFX"OK Connection is done\n");
+								break;
+							}
+							else
+							printf(LOG_PREFX"3\n");
+						}
+						else
+						printf(LOG_PREFX"2\n");
+					}
+					else
+						printf(LOG_PREFX"1\n");
+				}
+				else
+				{
+					printf(LOG_PREFX"connect failed %d\n",i++);
+					sleep(1);
+				}
+		    }
+			else
+				break;
+		}
+		else
+			printf(LOG_PREFX"4\n");
+	}
+	imode=0;
+	ioctl(socket_fd, FIONBIO, &imode); 
+	if(i==timeout)
+	{
+		close(socket_fd);  
+		return -1;
+	}*/
+	fcntl(socket_fd, F_SETFL, 0);
     return socket_fd;  
 }  
   
@@ -170,6 +281,26 @@ static void http_tcpclient_close(int socket){
     close(socket);  
 }  
   
+static int http_tcpclient_recv(int socket,char *lpbuff){	
+  int recvnum = 0;	
+
+  recvnum = recv(socket, lpbuff,BUFFER_SIZE*4,0);  
+
+  return recvnum;  
+}
+
+static int http_tcpclient_send(int socket,char *buff,int size){  
+  int sent=0,tmpres=0;	
+
+  while(sent < size){  
+	  tmpres = send(socket,buff+sent,size-sent,0);	
+	  if(tmpres == -1){  
+		  return -1;  
+	  }  
+	  sent += tmpres;  
+  }  
+  return sent;	
+}  
 static int http_parse_url(const char *url,char *host,char *file,int *port)  
 {  
     char *ptr1,*ptr2;  
@@ -212,26 +343,6 @@ static int http_parse_url(const char *url,char *host,char *file,int *port)
 }  
   
   
-static int http_tcpclient_recv(int socket,char *lpbuff){  
-    int recvnum = 0;  
-  
-    recvnum = recv(socket, lpbuff,BUFFER_SIZE*4,0);  
-  
-    return recvnum;  
-}  
-  
-static int http_tcpclient_send(int socket,char *buff,int size){  
-    int sent=0,tmpres=0;  
-  
-    while(sent < size){  
-        tmpres = send(socket,buff+sent,size-sent,0);  
-        if(tmpres == -1){  
-            return -1;  
-        }  
-        sent += tmpres;  
-    }  
-    return sent;  
-}  
   
 static char *http_parse_result(const char*lpbuf)  
 {  
@@ -239,29 +350,29 @@ static char *http_parse_result(const char*lpbuf)
     char *response = NULL;  
     ptmp = (char*)strstr(lpbuf,"HTTP/1.1");  
     if(!ptmp){  
-        printf("http/1.1 not faind\n");  
+        printf(LOG_PREFX"http/1.1 not faind\n");  
         return NULL;  
     }  
     if(atoi(ptmp + 9)!=200){  
-        printf("result:\n%s\n",lpbuf);  
+        printf(LOG_PREFX"result:\n%s\n",lpbuf);  
         return NULL;  
     }  
   
     ptmp = (char*)strstr(lpbuf,"\r\n\r\n");  
     if(!ptmp){  
-        printf("ptmp is NULL\n");  
+        printf(LOG_PREFX"ptmp is NULL\n");  
         return NULL;  
     }  
     response = (char *)malloc(strlen(ptmp)+1);  
     if(!response){  
-        printf("malloc failed \n");  
+        printf(LOG_PREFX"malloc failed \n");  
         return NULL;  
     }  
     strcpy(response,ptmp+4);  
     return response;  
 }  
   
-char * http_post(const char *url,const char *post_str){  
+char * http_post(const char *url,const char *post_str,int timeout){  
   
     char post[BUFFER_SIZE] = {'\0'};  
     int socket_fd = -1;  
@@ -274,33 +385,33 @@ char * http_post(const char *url,const char *post_str){
     char *response = NULL;  
   
     if(!url || !post_str){  
-        printf("      failed!\n");  
+        printf(LOG_PREFX"      failed!\n");  
         return NULL;  
     }  
   
     if(http_parse_url(url,host_addr,file,&port)){  
-        printf("http_parse_url failed!\n");  
+        printf(LOG_PREFX"http_parse_url failed!\n");  
         return NULL;  
     }  
-    //printf("host_addr : %s\tfile:%s\t,%d\n",host_addr,file,port);  
+    printf(LOG_PREFX"host_addr : %s\tfile:%s\t,%d\n",host_addr,file,port);  
   
-    socket_fd = http_tcpclient_create(host_addr,port);  
+    socket_fd = http_tcpclient_create(host_addr,port,timeout);  
     if(socket_fd < 0){  
-        printf("http_tcpclient_create failed\n");  
+        printf(LOG_PREFX"http_tcpclient_create failed\n");  
         return NULL;  
     }  
        
     sprintf(lpbuf,HTTP_POST,file,host_addr,port,strlen(post_str),post_str);  
   
     if(http_tcpclient_send(socket_fd,lpbuf,strlen(lpbuf)) < 0){  
-        printf("http_tcpclient_send failed..\n");  
+        printf(LOG_PREFX"http_tcpclient_send failed..\n");  
         return NULL;  
     }  
-    printf("POST Sent:\n%s\n",lpbuf);  
+    printf(LOG_PREFX"POST Sent:\n%s\n",lpbuf);  
   
     /*it's time to recv from server*/  
     if(http_tcpclient_recv(socket_fd,lpbuf) <= 0){  
-        printf("http_tcpclient_recv failed\n");  
+        printf(LOG_PREFX"http_tcpclient_recv failed\n");  
         return NULL;  
     }  
   
@@ -309,7 +420,7 @@ char * http_post(const char *url,const char *post_str){
     return http_parse_result(lpbuf);  
 }  
   
-char * http_get(const char *url)  
+char * http_get(const char *url,int timeout)  
 {  
   
     char post[BUFFER_SIZE] = {'\0'};  
@@ -322,32 +433,32 @@ char * http_get(const char *url)
     int len=0;  
   
     if(!url){  
-        printf("      failed!\n");  
+        printf(LOG_PREFX"      failed!\n");  
         return NULL;  
     }  
   
     if(http_parse_url(url,host_addr,file,&port)){  
-        printf("http_parse_url failed!\n");  
+        printf(LOG_PREFX"http_parse_url failed!\n");  
         return NULL;  
     }  
-    //printf("host_addr : %s\tfile:%s\t,%d\n",host_addr,file,port);  
+    printf(LOG_PREFX"host_addr : %s\tfile:%s\t,%d\n",host_addr,file,port);  
   
-    socket_fd =  http_tcpclient_create(host_addr,port);  
+    socket_fd =  http_tcpclient_create(host_addr,port,timeout);  
     if(socket_fd < 0){  
-        printf("http_tcpclient_create failed\n");  
+        printf(LOG_PREFX"http_tcpclient_create failed\n");  
         return NULL;  
     }  
   
     sprintf(lpbuf,HTTP_GET,file,host_addr,port);  
   
     if(http_tcpclient_send(socket_fd,lpbuf,strlen(lpbuf)) < 0){  
-        printf("http_tcpclient_send failed..\n");  
+        printf(LOG_PREFX"http_tcpclient_send failed..\n");  
         return NULL;  
     }  
-  printf("GET Sent:\n%s\n",lpbuf);  
+  	printf(LOG_PREFX"GET Sent:\n%s\n",lpbuf);  
   
     if(http_tcpclient_recv(socket_fd,lpbuf) <= 0){  
-        printf("http_tcpclient_recv failed\n");  
+        printf(LOG_PREFX"http_tcpclient_recv failed\n");  
         return NULL;  
     }  
     http_tcpclient_close(socket_fd);  
@@ -355,12 +466,12 @@ char * http_get(const char *url)
     return http_parse_result(lpbuf);  
 }  
 #endif
-void doit(char *text,const char *item_str)
+char *doit(char *text,const char *item_str)
 {
-	char *out;cJSON *json,*item_json;
+	char *out=NULL;cJSON *json,*item_json;
 	
 	json=cJSON_Parse(text);
-	if (!json) {printf("Error before: [%s]\n",cJSON_GetErrorPtr());}
+	if (!json) {printf(LOG_PREFX"Error before: [%s]\n",cJSON_GetErrorPtr());}
 	else
 	{
 		//out=cJSON_Print(json);
@@ -368,32 +479,18 @@ void doit(char *text,const char *item_str)
 		if (item_json)
 		{
 		    int nLen = strlen(item_json->valuestring);
-		    printf("%s ,%d %s\n",item_str,nLen,item_json->valuestring);
+			out=(char *)malloc(nLen+1);
+			memset(out,'\0',nLen+1);
+			memcpy(out,item_json->valuestring,nLen);
+		    //printf(LOG_PREFX"%s ,%d %s\n",item_str,nLen,item_json->valuestring);
 		}
 		else
-			printf("get %s failed\n",item_str);
+			printf(LOG_PREFX"get %s failed\n",item_str);
 		cJSON_Delete(json);
-		//printf("%s\n",out);
+		//printf(LOG_PREFX"%s\n",out);
 		//free(out);
 	}
+	return out;
 }
 
-//get cmd http://101.200.236.69:8080/lamp/lamp/commond/wait?lampCode=aaaa
-//ack http://101.200.236.69:8080/lamp/lamp/commond/response?commondId=f1d51484-8daf-47a3-a490-f56461d3ce23&isSuccess=true
-int main(int argc,char *argv[])
-{
-	printf("Hello World\n");
-	char *rcv=http_get("http://101.200.236.69:8080/lamp/lamp/commond/wait?lampCode=aaaa");
-	printf("%s\n",rcv);
-	doit(rcv,"code");
-	free(rcv);
-	rcv=http_get("http://101.200.236.69:8080/lamp/lamp/commond/response?commondId=f1d51484-8daf-47a3-a490-f56461d3ce23&isSuccess=true");
-	printf("%s\n",rcv);
-	doit(rcv,"errorMsg");
-	free(rcv);
-	//rcv=http_post("http://101.200.236.69:8080/lamp/device/register","macAddress=xxxx");
-	//printf("%s\n",rcv);
-	//free(rcv);
-	return 0;
-	//return htpp_get(argc,argv);
-}
+
