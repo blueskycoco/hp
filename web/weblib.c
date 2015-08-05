@@ -273,7 +273,7 @@ static int http_tcpclient_create(const char *host, int port,int timeout){
 		close(socket_fd);  
 		return -1;
 	}*/
-	fcntl(socket_fd, F_SETFL, 0);
+	//fcntl(socket_fd, F_SETFL, 0);
     return socket_fd;  
 }  
   
@@ -281,24 +281,52 @@ static void http_tcpclient_close(int socket){
     close(socket);  
 }  
   
-static int http_tcpclient_recv(int socket,char *lpbuff){	
+static int http_tcpclient_recv(int socket,char *lpbuff,int timeout){	
   int recvnum = 0;	
-
-  recvnum = recv(socket, lpbuff,BUFFER_SIZE*4,0);  
-
+  fd_set rset;
+  struct timeval tv; 
+  tv.tv_usec=0;
+  tv.tv_sec = timeout;
+  FD_ZERO(&rset); 
+  FD_SET(socket, &rset);
+  if(select(socket+1, &rset, NULL, NULL, &tv) > 0) 
+  {
+  	recvnum = recv(socket, lpbuff,BUFFER_SIZE*4,0);  
+  }
+  else
+  {
+	printf(LOG_PREFX"recv time out\n");
+	return -1;
+  }
   return recvnum;  
 }
 
-static int http_tcpclient_send(int socket,char *buff,int size){  
+static int http_tcpclient_send(int socket,char *buff,int size,int timeout){  
   int sent=0,tmpres=0;	
+  fd_set wset;
+  struct timeval tv; 
+  tv.tv_usec=0;
+  tv.tv_sec = timeout;
 
-  while(sent < size){  
-	  tmpres = send(socket,buff+sent,size-sent,0);	
-	  if(tmpres == -1){  
-		  return -1;  
-	  }  
-	  sent += tmpres;  
-  }  
+	while(sent < size)
+	{  
+		FD_ZERO(&wset);
+		FD_SET(socket, &wset);
+		if(select(socket+1,NULL, &wset,  NULL, &tv) > 0) 
+		{ 
+			tmpres = send(socket,buff+sent,size-sent,0);	
+			if(tmpres == -1)
+			{  
+				return -1;  
+			}  
+			sent += tmpres; 
+		}
+		else
+		{
+			printf(LOG_PREFX"sent time out\n");
+			return -1;
+		}
+	}  
   return sent;	
 }  
 static int http_parse_url(const char *url,char *host,char *file,int *port)  
@@ -403,14 +431,14 @@ char * http_post(const char *url,const char *post_str,int timeout){
        
     sprintf(lpbuf,HTTP_POST,file,host_addr,port,strlen(post_str),post_str);  
   
-    if(http_tcpclient_send(socket_fd,lpbuf,strlen(lpbuf)) < 0){  
+    if(http_tcpclient_send(socket_fd,lpbuf,strlen(lpbuf),timeout) < 0){  
         printf(LOG_PREFX"http_tcpclient_send failed..\n");  
         return NULL;  
     }  
     printf(LOG_PREFX"POST Sent:\n%s\n",lpbuf);  
   
     /*it's time to recv from server*/  
-    if(http_tcpclient_recv(socket_fd,lpbuf) <= 0){  
+    if(http_tcpclient_recv(socket_fd,lpbuf,timeout) <= 0){  
         printf(LOG_PREFX"http_tcpclient_recv failed\n");  
         return NULL;  
     }  
@@ -451,13 +479,13 @@ char * http_get(const char *url,int timeout)
   
     sprintf(lpbuf,HTTP_GET,file,host_addr,port);  
   
-    if(http_tcpclient_send(socket_fd,lpbuf,strlen(lpbuf)) < 0){  
+    if(http_tcpclient_send(socket_fd,lpbuf,strlen(lpbuf),timeout) < 0){  
         printf(LOG_PREFX"http_tcpclient_send failed..\n");  
         return NULL;  
     }  
   	printf(LOG_PREFX"GET Sent:\n%s\n",lpbuf);  
   
-    if(http_tcpclient_recv(socket_fd,lpbuf) <= 0){  
+    if(http_tcpclient_recv(socket_fd,lpbuf,timeout) <= 0){  
         printf(LOG_PREFX"http_tcpclient_recv failed\n");  
         return NULL;  
     }  

@@ -45,7 +45,6 @@ int main(int argc, char *argv[])
 		fclose(fp);
 		testID = MSPUploadData("userword", UserData, len, "dtt = userword, sub = asr", &ret);
 	}
-	MSPLogout();
 	if(ret != MSP_SUCCESS)
 	{
 		printf("UploadData with errorCode: %d len %d\n", ret,len);
@@ -55,6 +54,7 @@ int main(int argc, char *argv[])
 	printf("*************************************************************\n");
 	printf("GrammarID: \"%s\" \n", GrammarID);
 	printf("*************************************************************\n");
+	MSPLogout();
 	return 0;
 }
 
