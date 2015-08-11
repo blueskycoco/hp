@@ -224,12 +224,13 @@ static void fileplay_eof(void *user_data, MSFilter *f, unsigned int event, void 
 	MS_UNUSED(f), MS_UNUSED(event_data);
 }
 
-int playback(char *filename)
+int playback(int msgid,char *filename)
 {
 	MSFilter *f1_w,*play;
 	MSSndCard *card_playback1;
 	MSTicker *ticker1;
 	int i,ret=0;
+	struct msg_st data;
 	int done = FALSE;
 	struct msg_st data_w;
 	long int msgtype = 0;
@@ -273,6 +274,8 @@ int playback(char *filename)
 		ms_filter_link(play,0,f1_w,0);		
 		ms_ticker_attach(ticker1,play);
 		while (done != TRUE) {
+			if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_LOCAL_STOP_PLAYBACK, IPC_NOWAIT)>0)
+				break;			
 			ms_usleep(10000);
 		}
 
@@ -407,7 +410,10 @@ int main(int argc, char *argv[])
 	char res[256]={0};
 	char record_file[256]={0};
 	char playback_file[256]={0};
-	struct msg_st data;
+	struct msg_st data;	
+	int audio_system_state=0;
+	int vol=0;
+	char vol_str[4]={0};
 
 	msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
 	if(msgid == -1)  
@@ -427,8 +433,8 @@ int main(int argc, char *argv[])
 	else
 		strcpy(playback_file,argv[2]);
 	while(1)
-	{		
-		static int audio_system_state=STATE_NULL;
+	{
+		char text_out[256]={0};
 		char err_msg[256]={0};
 		printf(LOG_PREFX"waiting MainCtlSystem cmd...\n");
 		if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_AUDIO , 0)>=0)
@@ -436,6 +442,77 @@ int main(int argc, char *argv[])
 		printf(LOG_PREFX"msgtype %d ,data id %d,text %s\n",data.msg_type,data.id,data.text);
 		if(data.id==MAIN_TO_AUDIO)
 		{
+			if(strstr(data.text, CMD_08_LIGHT_VOICE_MIC)!=NULL)
+			{
+				//set vol from main process
+				printf(LOG_PREFX"set vol %s\n",data.text+7);
+				vol=atoi(data.text+7);
+				memcpy(vol_str,data.text+7,3);
+				//set to low layer
+				memcpy(text_out,data.text,strlen(data.text));
+			}
+			else if((strncmp(CMD_10_LIGHT_OFF_MIC, data.text, strlen(CMD_10_LIGHT_OFF_MIC)) == 0)||
+			{		(strncmp(CMD_14_LIGHT_MODE_MIC, data.text, strlen(CMD_14_LIGHT_MODE_MIC)) == 0)||
+					(strncmp(CMD_15_SAVE_MODE_ON_MIC, data.text, strlen(CMD_15_SAVE_MODE_ON_MIC)) == 0)||
+					(strncmp(CMD_16_SAVE_MODE_OFF_MIC, data.text, strlen(CMD_16_SAVE_MODE_OFF_MIC)) == 0))
+				//get vol from audio sub system 
+				printf(LOG_PREFX"get vol \n");
+				memcpy(text_out,data.text,6);
+				strcat(text_out,";");
+				strcat(text_out,vol_str);
+			}
+			else if(strncmp(CMD_21_RING_NOW_ARM, data.text, strlen(CMD_21_RING_NOW_ARM)) == 0)
+			{
+				//ring
+				printf(LOG_PREFX"ring coming %s\n",data.text);
+				int cur_vol=strchr(data.text,';');
+
+			}
+			else if(strlen(data.text)>7) 
+			{				
+				char mach_play_stop[8]={0};
+				memcpy(mach_play_stop,data.text,7);
+				if(fnmatch(CMD_01_MUSIC_PLAY, mach_play_stop, FNM_PATHNAME) == 0)
+				{	
+					if(!(audio_system_state&MUSIC_PLAY))
+					{
+						//play music from web,mcu,bluetooth
+						printf(LOG_PREFX"play music from web,mcu,bluetooth %s\n",data.text+7);
+						audio_system_state|=MUSIC_PLAY;
+						if((fpid=fork())==0)
+						{
+							memcpy(text_out,mach_play_stop,7);
+							if(playback(msgid,data.text+7)==1)
+							{
+								strcat(text_out,"1");
+							}
+							else
+							{
+								strcat(text_out,"0");
+							}
+							exit(0);
+						}
+					}
+					else
+					{
+						printf(LOG_PREFX"already in music playing ,please wait %s\n",data.text+7);
+					}
+				}
+				else if(fnmatch(CMD_02_MUSIC_STOP, mach_play_stop, FNM_PATHNAME) == 0)
+				{
+					//stop play music
+					printf(LOG_PREFX"stop play music\n");
+					if(audio_system_state&MUSIC_PLAY)
+					{
+						audio_system_state&=~MUSIC_PLAY;
+						send_msg(msgid,TYPE_LOCAL_STOP_PLAYBACK,0,NULL);
+						ms_sleep(1);
+					}
+					memcpy(text_out,mach_play_stop,6);
+				}				
+			}
+			send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+			#if 0
 			switch (data.text[XXX_OFS])
 			{
 				case PROC_RECORD://start rec
@@ -623,6 +700,7 @@ int main(int argc, char *argv[])
 				default:
 					break;
 			}
+			#endif
 		}
 		}
 		else

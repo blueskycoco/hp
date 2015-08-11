@@ -20,61 +20,23 @@ typedef short int SR_WORD ;
 #define TYPE_MAIN_TO_AUDIO 				0x04
 #define TYPE_AUDIO_TO_MAIN 				0x03
 #define TYPE_LOCAL_STOP_RECORD			0x1f
+#define TYPE_LOCAL_STOP_PLAYBACK		0x1e
 
 #define MAIN_TO_AUDIO 					0x0d
 #define AUDIO_TO_MAIN 					0x0e
-#define STATE_START_RECORD 				1
-#define STATE_STOP_RECORD 				2
-#define STATE_PLAYBACK_LOCAL_BEGIN 		4
-#define STATE_PLAYBACK_LOCAL_END 		8
-#define STATE_XF_PLAYBACK_BEGIN 		16
-#define STATE_XF_PLAYBACK_END	 		32
-#define STATE_NULL						0
 
-#define PROC_RECORD 					'c'
-#define PROC_PLAYBACK 					'b'
-#define XF_PLAYBACK 					'd'
+#define MUSIC_PLAY						0x01
+#define CMD_01_MUSIC_PLAY					"b;01;?;"
+#define CMD_02_MUSIC_STOP					"b;02;?;"
+#define CMD_08_LIGHT_VOICE_MIC				"e;08;a;"
+#define CMD_10_LIGHT_OFF_MIC				"e;10;a;"
+#define CMD_14_LIGHT_MODE_MIC				"e;14;a"
+#define CMD_15_SAVE_MODE_ON_MIC				"e;15;a"
+#define CMD_16_SAVE_MODE_OFF_MIC			"e;16;a"
+#define CMD_21_RING_NOW_ARM					"21;"
 
-#define STATUS_RECORD 					's'
-#define STATUS_PLAYBACK 				'b'
-#define STATUS_XF_PLAYBACK 				'd'
-#define RESULT_XF_RECORD 				'r'
 
-#define CMD_START_RECORD 				'1'
-#define CMD_STOP_RECORD 				'0'
-#define CMD_CHECK_RECORD 				'2'
-#define STATUS_START_RECORD 			'1'
-#define STATUS_STOP_RECORD 				'0'
-#define STATUS_PLAYBACK_LOCAL_BEGIN 	'1'
-#define STATUS_PLAYBACK_LOCAL_DONE 		'2'
-#define STATUS_PLAYBACK_LOCAL_FAILED 	'0'
-#define STATUS_XF_PLAYBACK_BEGIN 		'1'
-#define STATUS_XF_PLAYBACK_DONE 		'2'
-#define STATUS_XF_PLAYBACK_UNDO 		'0'
-#define STATUS_XF_PLAYBACK_OK 			'3'
-#define STATUS_XF_PLAYBACK_FAILED 		'4'
-
-//#define CMD_START_RECORD				"c;1"
-//#define CMD_STOP_RECORD					"c;0"
-//#define CMD_CHECK_RECORD				"c;2"
-#define CMD_PLAYBACK_LOCAL_FILE			"b;"
-#define CMD_PLAYBACK_LOCAL_CHECK		"b;"
-#define CMD_XF_PLAYBACK_START			"d;"
-
-#define ACK_RECORD_STOP 				"s;0"
-#define ACK_RECORD_START 				"s;1"
-#define ACK_XF_RECORD_RESULT			"r;"
-#define ACK_PLAYBACK_LOCAL_START 		"b;1"
-#define ACK_PLAYBACK_LOCAL_STOP 		"b;2"
-#define ACK_PLAYBACK_LOCAL_FAILED 		"b;0"
-#define ACK_PLAYBACK_XF_START 			"d;1"
-#define ACK_PLAYBACK_XF_STOP 			"d;2"
-#define ACK_PLAYBACK_XF_UNDO 			"d;0"
-#define ACK_PLAYBACK_XF_OK 				"d;3"
-#define ACK_PLAYBACK_XF_FAILED 			"d;4"
 #define LOG_PREFX						"[AudioSubSystem]:"
-#define XXX_OFS 0
-#define YYY_OFS 2
 struct wave_pcm_hdr
 {
 	char            riff[4];                        // = "RIFF"
