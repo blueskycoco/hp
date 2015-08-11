@@ -21,7 +21,40 @@ int send_msg(int msgid,unsigned char msg_type,unsigned char id,unsigned char *te
 	}
 	printf(LOG_PREFX"send msg done\n");
 }
+int read_file_line(char *file,int line_addr,char *out)
+{
+	FILE * fp;
+	char * line = NULL;
+	size_t len = 0;
+	int result=0;
+	int line_cnt=0;
+	ssize_t read;
 
+	fp = fopen(file, "r");
+	if (fp == NULL)
+	   exit(-1);
+
+	while ((read = getline(&line, &len, fp)) != -1) {
+	   printf("Retrieved line of length %zu :\n", read);
+	   printf("%s", line);
+	   if(line_cnt==line_addr)
+	   {
+			strcpy(out,strstr(line,',')+1);
+			printf(LOG_PREFX"get %s\n",out);
+			result=1;
+			free(line);
+			break;
+	   }
+	   else
+	   		free(line);
+	   line_cnt++;
+	}
+
+	fclose(fp);
+	if (line)
+	   free(line);
+	return result;
+}
 int main(int argc, char *argv[])
 {
 
@@ -46,10 +79,175 @@ int main(int argc, char *argv[])
 	while(1)
 	{
 		char err_msg[256]={0};
+		char text_out[256]={0};
+		char last_check=0;
+		char file_name[256]={0};
+		char operation=0;//0 for read ,1 for write
+		int offs=0;
+		int len;
+		strcpy(file_name,FILE_PATH_NAME);
 		printf(LOG_PREFX"waiting MainCtlSystem cmd...\n");
-		if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_AUDIO , 0)>=0)
+		if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_FILE , 0)>=0)
 		{
-			if (fnmatch(PATTERN, entry->d_name, FNM_PATHNAME) == 0) {}
+			if(data.id==MAIN_TO_FILE)
+			{
+				if(fnmatch(CMD_00_MUSIC_FIND, data.text, FNM_PATHNAME) == 0)
+				{
+					char buf[25]={0};
+					strcat(file_name,"01");
+					operation=0;
+					strcpy(text_out,"d;00;b;");
+					strcat(text_out,"music-id ");
+					if(read_file_line(file_name,FILE_MUSIC_NAME_LINE,buf))
+						strcat(text_out,buf);
+					else
+						strcat(text_out,"unknown");
+					memset(buf,'\0',25);
+					strcat(text_out,";music-name ");
+					if(read_file_line(file_name,FILE_MUSIC_NAME_LINE,buf))
+						strcat(text_out,buf);
+					else
+						strcat(text_out,"unknown");
+					memset(buf,'\0',25);
+					strcat(text_out,";singer ");
+					if(read_file_line(file_name,FILE_MUSIC_SINGER_LINE,buf))
+						strcat(text_out,buf);
+					else
+						strcat(text_out,"unknown");
+					memset(buf,'\0',25);
+					strcat(text_out,";music-like/unlike ");
+					if(read_file_line(file_name,FILE_MUSIC_LIKE_LINE,buf))
+						strcat(text_out,buf);
+					else
+						strcat(text_out,"unknown");
+				}
+				else if(fnmatch(CMD_25_REMINDER_ON_ARM, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_03_MUSIC_CHOOSE, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_04_MUSIC_LIKE, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_05_MUSIC_UNLIKE, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_07_LIGHT_MANUAL, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_07_LIGHT_MANUAL_2, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_08_LIGHT_VOICE, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_08_LIGHT_VOICE_2, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_10_LIGHT_LIGHT_OFF, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_10_LIGHT_LIGHT_OFF_2, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_11_LIGHT_MODE_FIND, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_12_LIGHT_MODE_CHECKs, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_13_LIGHT_MODE_CHOOSE, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_13_LIGHT_MODE_CHOOSE_2, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_14_LIGHT_MODE, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_14_LIGHT_MODE_2, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_15_SAVE_MODE_ON, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_15_SAVE_MODE_ON_2, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_16_SAVE_MODE_OFF, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_16_SAVE_MODE_OFF_2, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_17_RING_SET, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_17_RING_SET_2, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_18_RING_ON, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_19_RING_OFF, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_20_RING_DELAY, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_21_RING_NOW_ARM, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_21_RING_NOW_ARM_2, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_21_RING_NOW_ARM_3, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_23_TIME_UPDATE_ARM, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_24_ADD_REMINDER, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				else if(fnmatch(CMD_24_ADD_REMINDER_2, data.text, FNM_PATHNAME) == 0)
+				{
+
+				}
+				send_msg(msgid,TYPE_FILE_TO_MAIN,FILE_TO_MAIN,text_out);
+			}
+			
 		}
 		else
 		{
