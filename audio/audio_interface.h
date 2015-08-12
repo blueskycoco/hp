@@ -44,6 +44,7 @@ typedef short int SR_WORD ;
 #define CMD_16_SAVE_MODE_OFF_MIC			"e;16;a"
 #define CMD_21_RING_NOW_ARM					"21;"
 #define CMD_START_RECORD					"c;1"
+#define CMD_RCV_GRAMMAR_ID					"c;2;"
 
 #define LOG_PREFX						"[AudioSubSystem]:"
 struct wave_pcm_hdr

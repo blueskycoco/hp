@@ -3,7 +3,7 @@
 int cancle_rec=0;
 char GrammarID[128];
 unsigned char g_audio_state=STATUS_STOP_RECORD;
-int run_asr(const char* asrfile ,  const char* param, unsigned char **rec_result)
+int run_asr(char *grammar_id,const char* asrfile ,  const char* param, unsigned char **rec_result)
 {
 	int result=1;
 	const char *sessionID;
@@ -18,7 +18,7 @@ int run_asr(const char* asrfile ,  const char* param, unsigned char **rec_result
 	int ret = 0 ;
 	*rec_result=NULL;
 	
-	sessionID = QISRSessionBegin(GrammarID, param, &ret); //asr
+	sessionID = QISRSessionBegin(grammar_id, param, &ret); //asr
 	if(ret !=0)
 	{
 		printf(LOG_PREFX"QISRSessionBegin Failed,ret=%d\n",ret);
@@ -123,7 +123,7 @@ int run_asr(const char* asrfile ,  const char* param, unsigned char **rec_result
 	return result;
 }
 
-int get_from_server(char *file,unsigned char **rec_result)
+int get_from_server(char *grammar_id,char *file,unsigned char **rec_result)
 {
 	const char* login_config = "appid = 55801297,work_dir =   .  ";
 	const char* param = "rst=plain,rse=utf8,sub=asr,aue=speex-wb,auf=audio/L16;rate=16000,ent=sms16k";    //注意sub=asr,16k音频aue=speex-wb，8k音频识别aue=speex，
@@ -137,8 +137,8 @@ int get_from_server(char *file,unsigned char **rec_result)
 	}
 	else
 	{
-		strcpy(GrammarID, "e7eb1a443ee143d5e7ac52cb794810fe");
-		result = run_asr(file, param, rec_result);
+		//strcpy(GrammarID, "e7eb1a443ee143d5e7ac52cb794810fe");
+		result = run_asr(grammar_id,file, param, rec_result);
 		if(result == 1)
 		{
 			printf(LOG_PREFX"run_asr with errorCode: %d \n", ret);
@@ -273,7 +273,8 @@ int playback(int msgid,char *filename)
 		ms_ticker_set_name(ticker1,"card1 to card2");
 		ms_filter_link(play,0,f1_w,0);		
 		ms_ticker_attach(ticker1,play);
-		while (done != TRUE) {
+		while (done != TRUE) 
+		{
 			if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_LOCAL_STOP_PLAYBACK, IPC_NOWAIT)>0)
 				break;			
 			ms_usleep(10000);
@@ -411,7 +412,8 @@ int main(int argc, char *argv[])
 	char record_file[256]={0};
 	char playback_file[256]={0};
 	struct msg_st data;	
-	char *audio_system_state;
+	char *audio_system_state=NULL;
+	char *grammar_id=NULL;
 	int vol=0;
 	char vol_str[4]={0};
 	key_t shmid;  
@@ -444,14 +446,32 @@ int main(int argc, char *argv[])
 		char text_out[256]={0};
 		char err_msg[256]={0};
 		printf(LOG_PREFX"waiting MainCtlSystem cmd...\n");
-		if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_AUDIO , 0)>=0)
+		if(strstr(data.text, CMD_RCV_GRAMMAR_ID)!=NULL)
+		{
+			//set grammarid
+			if(strlen(data.text)>4)
+			{
+				printf(LOG_PREFX"set grammarid %s\n",data.text+4);
+				if(grammar_id)
+				{
+					free(grammar_id);
+				}
+				grammar_id=(char *)malloc(strlen(data.text)-3);
+				memset(grammar_id,'\0',strlen(data.text)-3);
+				memcpy(grammar_id,data.text+4,strlen(data.text)-4);
+				strcpy(text_out,"r;2");
+			}
+			else
+				strcpy(text_out,"r;0");
+		}
+		else if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_AUDIO , 0)>=0)
 		{
 		printf(LOG_PREFX"msgtype %d ,data id %d,text %s\n",data.msg_type,data.id,data.text);
 		if(data.id==MAIN_TO_AUDIO)
 		{
 			if((strncmp(CMD_START_RECORD, data.text, strlen(CMD_START_RECORD)) == 0)
 			{
-				if(!(*audio_system_state&MUSIC_RECORD_START))
+				if((!(*audio_system_state&MUSIC_RECORD_START)) && (grammar_id!=NULL))
 				{
 					*audio_system_state|=MUSIC_RECORD_START;
 					strcpy(text_out,"s;1");
@@ -459,7 +479,7 @@ int main(int argc, char *argv[])
 					{
 						char *audio_state=(char *)shmat(shmid, 0, 0);
 						rec(record_file);
-						get_from_server(record_file,&rec_result);
+						get_from_server(grammar_id,record_file,&rec_result);
 						if(rec_result!=NULL)
 						{
 							char *tmp=strrchr(rec_result,'=');
