@@ -11,12 +11,15 @@
 #include <errno.h>  
 #include <sys/msg.h>  
 #include <signal.h>
+#include <sys/ipc.h>  
+#include <sys/shm.h>  
 #include "alsa/qisr.h"
 #include "alsa/msp_cmn.h"
 #include "alsa/msp_errors.h"
 #include "alsa/qtts.h"
 typedef int SR_DWORD;
 typedef short int SR_WORD ;
+#define PERM S_IRUSR|S_IWUSR  
 #define TYPE_MAIN_TO_AUDIO 				0x04
 #define TYPE_AUDIO_TO_MAIN 				0x03
 #define TYPE_LOCAL_STOP_RECORD			0x1f
@@ -25,7 +28,13 @@ typedef short int SR_WORD ;
 #define MAIN_TO_AUDIO 					0x0d
 #define AUDIO_TO_MAIN 					0x0e
 
-#define MUSIC_PLAY						0x01
+#define MUSIC_PLAY_START				0x01
+#define MUSIC_PLAY_STOP					0x02
+#define MUSIC_RECORD_START				0x04
+#define MUSIC_RECORD_STOP				0x08
+#define MUSIC_XF_START					0x10
+#define MUSIC_XF_STOP					0x20
+
 #define CMD_01_MUSIC_PLAY					"b;01;?;"
 #define CMD_02_MUSIC_STOP					"b;02;?;"
 #define CMD_08_LIGHT_VOICE_MIC				"e;08;a;"
@@ -34,7 +43,7 @@ typedef short int SR_WORD ;
 #define CMD_15_SAVE_MODE_ON_MIC				"e;15;a"
 #define CMD_16_SAVE_MODE_OFF_MIC			"e;16;a"
 #define CMD_21_RING_NOW_ARM					"21;"
-
+#define CMD_START_RECORD					"c;1"
 
 #define LOG_PREFX						"[AudioSubSystem]:"
 struct wave_pcm_hdr

@@ -148,13 +148,13 @@ int get_from_server(char *file,unsigned char **rec_result)
 	return result;
 }
 
-void rec(int msgid,char *filename)
+void rec(/*int msgid,*/char *filename)
 {
 	MSFilter *f1_r,*f1_w,*record;
 	MSSndCard *card_capture1;
 	MSSndCard *card_playback1;
 	MSTicker *ticker1;
-	struct msg_st data;
+	//struct msg_st data;
 	long int msgtype = 0;
 	char *capt_card1=NULL,*play_card1=NULL;
 	int rate = 8000;
@@ -203,9 +203,9 @@ void rec(int msgid,char *filename)
 		ms_ticker_set_name(ticker1,"card1 to card2");
 		ms_filter_link(f1_r,0,record,0);	 	
 		ms_ticker_attach(ticker1,f1_r);
-		msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_LOCAL_STOP_RECORD, 0);
-		g_audio_state=STATUS_START_RECORD;
-
+		//msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_LOCAL_STOP_RECORD, 0);
+		//g_audio_state=STATUS_START_RECORD;
+		ms_sleep(3);
 		ms_filter_call_method(record,MS_FILE_REC_STOP,NULL);
 		ms_filter_call_method(record,MS_FILE_REC_CLOSE,NULL);
 		if(ticker1) ms_ticker_detach(ticker1,f1_r);
@@ -213,7 +213,7 @@ void rec(int msgid,char *filename)
 		if(ticker1) ms_ticker_destroy(ticker1);
 		if(f1_r) ms_filter_destroy(f1_r);
 		if(record) ms_filter_destroy(record);		
-		g_audio_state=STATUS_STOP_RECORD;
+		//g_audio_state=STATUS_STOP_RECORD;
 	}	
 }
 static void fileplay_eof(void *user_data, MSFilter *f, unsigned int event, void *event_data) {
@@ -411,9 +411,10 @@ int main(int argc, char *argv[])
 	char record_file[256]={0};
 	char playback_file[256]={0};
 	struct msg_st data;	
-	int audio_system_state=0;
+	char *audio_system_state;
 	int vol=0;
 	char vol_str[4]={0};
+	key_t shmid;  
 
 	msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
 	if(msgid == -1)  
@@ -432,6 +433,12 @@ int main(int argc, char *argv[])
 		strcpy(playback_file,"/tmp/3.wav");
 	else
 		strcpy(playback_file,argv[2]);
+	if((shmid = shmget(IPC_PRIVATE, 2, PERM)) == -1 )
+	{
+        fprintf(stderr, "Create Share Memory Error:%s/n/a", strerror(errno));  
+        exit(1);  
+    }  
+	audio_system_state = (char *)shmat(shmid, 0, 0);
 	while(1)
 	{
 		char text_out[256]={0};
@@ -442,7 +449,45 @@ int main(int argc, char *argv[])
 		printf(LOG_PREFX"msgtype %d ,data id %d,text %s\n",data.msg_type,data.id,data.text);
 		if(data.id==MAIN_TO_AUDIO)
 		{
-			if(strstr(data.text, CMD_08_LIGHT_VOICE_MIC)!=NULL)
+			if((strncmp(CMD_START_RECORD, data.text, strlen(CMD_START_RECORD)) == 0)
+			{
+				if(!(*audio_system_state&MUSIC_RECORD_START))
+				{
+					*audio_system_state|=MUSIC_RECORD_START;
+					strcpy(text_out,"s;1");
+					if((fpid=fork())==0)
+					{
+						char *audio_state=(char *)shmat(shmid, 0, 0);
+						rec(record_file);
+						get_from_server(record_file,&rec_result);
+						if(rec_result!=NULL)
+						{
+							char *tmp=strrchr(rec_result,'=');
+							if(tmp!=NULL)
+							{
+								strcpy(res,"r;");
+								strcat(res,tmp+1);
+								printf(LOG_PREFX"res %s\n",res);
+							}
+							else
+								memset(res,'\0',256);
+							free(rec_result);
+							rec_result=NULL;
+						}
+						*audio_state&=~MUSIC_RECORD_START;
+						shmdt(audio_state);
+						if(strlen(res)==0)
+							strcat(res,"r;failed");
+						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,res);
+						exit(0);
+					}
+				}
+				else
+				{
+					strcpy(text_out,"s;0");
+				}
+			}
+			else if(strstr(data.text, CMD_08_LIGHT_VOICE_MIC)!=NULL)
 			{
 				//set vol from main process
 				printf(LOG_PREFX"set vol %s\n",data.text+7);
@@ -464,9 +509,19 @@ int main(int argc, char *argv[])
 			else if(strncmp(CMD_21_RING_NOW_ARM, data.text, strlen(CMD_21_RING_NOW_ARM)) == 0)
 			{
 				//ring
-				printf(LOG_PREFX"ring coming %s\n",data.text);
-				int cur_vol=strchr(data.text,';');
-
+				if(!(*audio_system_state&MUSIC_PLAY_START))
+				{
+					*audio_system_state|=MUSIC_PLAY_START;
+					printf(LOG_PREFX"ring coming %s\n",data.text);
+					int cur_vol=strchr(data.text,';');
+				}
+				else
+				{
+					printf(LOG_PREFX"already in music playing ,please wait %s\n",data.text);	
+					strcpy(text_out,"b;21;w;0");
+					send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+				}
+				
 			}
 			else if(strlen(data.text)>7) 
 			{				
@@ -474,13 +529,14 @@ int main(int argc, char *argv[])
 				memcpy(mach_play_stop,data.text,7);
 				if(fnmatch(CMD_01_MUSIC_PLAY, mach_play_stop, FNM_PATHNAME) == 0)
 				{	
-					if(!(audio_system_state&MUSIC_PLAY))
+					if(!(*audio_system_state&MUSIC_PLAY_START))
 					{
 						//play music from web,mcu,bluetooth
 						printf(LOG_PREFX"play music from web,mcu,bluetooth %s\n",data.text+7);
-						audio_system_state|=MUSIC_PLAY;
+						*audio_system_state|=MUSIC_PLAY_START;
 						if((fpid=fork())==0)
 						{
+							char *audio_state=(char *)shmat(shmid, 0, 0);
 							memcpy(text_out,mach_play_stop,7);
 							if(playback(msgid,data.text+7)==1)
 							{
@@ -490,28 +546,38 @@ int main(int argc, char *argv[])
 							{
 								strcat(text_out,"0");
 							}
+							*audio_state&=~MUSIC_PLAY_START;
+							shmdt(audio_state);
+							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
 							exit(0);
 						}
 					}
 					else
 					{
-						printf(LOG_PREFX"already in music playing ,please wait %s\n",data.text+7);
+						printf(LOG_PREFX"already in music playing ,please wait %s\n",data.text+7);						
+						memcpy(text_out,mach_play_stop,7);
+						strcat(text_out,"0");
+						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
 					}
 				}
 				else if(fnmatch(CMD_02_MUSIC_STOP, mach_play_stop, FNM_PATHNAME) == 0)
 				{
 					//stop play music
 					printf(LOG_PREFX"stop play music\n");
-					if(audio_system_state&MUSIC_PLAY)
+					if(*audio_system_state&MUSIC_PLAY_START)
 					{
-						audio_system_state&=~MUSIC_PLAY;
 						send_msg(msgid,TYPE_LOCAL_STOP_PLAYBACK,0,NULL);
 						ms_sleep(1);
+						*audio_system_state&=~MUSIC_PLAY_START;
 					}
 					memcpy(text_out,mach_play_stop,6);
 				}				
 			}
-			send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+			if(strlen(data.text)>4)
+			{
+				if(strncmp(data.text+2,"01",2)!=0)
+				send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+			}				
 			#if 0
 			switch (data.text[XXX_OFS])
 			{
