@@ -223,13 +223,19 @@ static void fileplay_eof(void *user_data, MSFilter *f, unsigned int event, void 
 	}
 	MS_UNUSED(f), MS_UNUSED(event_data);
 }
-
-int playback(int msgid,char *filename)
+void set_vol(int vol)
+{
+	char cmd[256]={0};
+	sprintf(cmd,"amixer cset numid=3,iface=MIXER,name=\'Headphone Playback Volume\' %d", vol);
+	printf(LOG_PREFX"cmd is %s",cmd);
+	system(cmd);
+}
+int playback(int msgid,char *filename,int vol,int step)
 {
 	MSFilter *f1_w,*play;
 	MSSndCard *card_playback1;
 	MSTicker *ticker1;
-	int i,ret=0;
+	int i=0,ret=0;
 	struct msg_st data;
 	int done = FALSE;
 	struct msg_st data_w;
@@ -239,7 +245,10 @@ int playback(int msgid,char *filename)
 	ortp_init();
 	ortp_set_log_level_mask(/*ORTP_MESSAGE|ORTP_WARNING|ORTP_ERROR|*/ORTP_FATAL);
 	ms_init();
-
+	if(vol!=0)
+	{
+		set_vol(vol);
+	}
 	card_playback1 = ms_snd_card_manager_get_default_playback_card(ms_snd_card_manager_get());
 	if (card_playback1==NULL)
 	{
@@ -276,8 +285,13 @@ int playback(int msgid,char *filename)
 		while (done != TRUE) 
 		{
 			if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_LOCAL_STOP_PLAYBACK, IPC_NOWAIT)>0)
-				break;			
+				break;
+			if(step!=0)
+			{
+				set_vol(vol+step*i);
+			}
 			ms_usleep(10000);
+			i++;
 		}
 
 		ms_filter_call_method_noarg(play, MS_FILE_PLAYER_CLOSE);
@@ -446,348 +460,350 @@ int main(int argc, char *argv[])
 		char text_out[256]={0};
 		char err_msg[256]={0};
 		printf(LOG_PREFX"waiting MainCtlSystem cmd...\n");
-		if(strstr(data.text, CMD_RCV_GRAMMAR_ID)!=NULL)
+		if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_AUDIO , 0)>=0)
 		{
-			//set grammarid
-			if(strlen(data.text)>4)
+			printf(LOG_PREFX"msgtype %d ,data id %d,text %s\n",data.msg_type,data.id,data.text);
+			if(data.id==MAIN_TO_AUDIO)
 			{
-				printf(LOG_PREFX"set grammarid %s\n",data.text+4);
-				if(grammar_id)
+				if(strstr(data.text, CMD_RCV_GRAMMAR_ID)!=NULL)
 				{
-					free(grammar_id);
-				}
-				grammar_id=(char *)malloc(strlen(data.text)-3);
-				memset(grammar_id,'\0',strlen(data.text)-3);
-				memcpy(grammar_id,data.text+4,strlen(data.text)-4);
-				strcpy(text_out,"r;2");
-			}
-			else
-				strcpy(text_out,"r;0");
-		}
-		else if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_AUDIO , 0)>=0)
-		{
-		printf(LOG_PREFX"msgtype %d ,data id %d,text %s\n",data.msg_type,data.id,data.text);
-		if(data.id==MAIN_TO_AUDIO)
-		{
-			if((strncmp(CMD_START_RECORD, data.text, strlen(CMD_START_RECORD)) == 0)
-			{
-				if((!(*audio_system_state&MUSIC_RECORD_START)) && (grammar_id!=NULL))
-				{
-					*audio_system_state|=MUSIC_RECORD_START;
-					strcpy(text_out,"s;1");
-					if((fpid=fork())==0)
+					//set grammarid
+					if(strlen(data.text)>4)
 					{
-						char *audio_state=(char *)shmat(shmid, 0, 0);
-						rec(record_file);
-						get_from_server(grammar_id,record_file,&rec_result);
-						if(rec_result!=NULL)
+						printf(LOG_PREFX"set grammarid %s\n",data.text+4);
+						if(grammar_id)
 						{
-							char *tmp=strrchr(rec_result,'=');
-							if(tmp!=NULL)
-							{
-								strcpy(res,"r;");
-								strcat(res,tmp+1);
-								printf(LOG_PREFX"res %s\n",res);
-							}
-							else
-								memset(res,'\0',256);
-							free(rec_result);
-							rec_result=NULL;
+							free(grammar_id);
 						}
-						*audio_state&=~MUSIC_RECORD_START;
-						shmdt(audio_state);
-						if(strlen(res)==0)
-							strcat(res,"r;failed");
-						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,res);
-						exit(0);
+						grammar_id=(char *)malloc(strlen(data.text)-3);
+						memset(grammar_id,'\0',strlen(data.text)-3);
+						memcpy(grammar_id,data.text+4,strlen(data.text)-4);
+						strcpy(text_out,"r;2");
 					}
+					else
+						strcpy(text_out,"r;0");
 				}
-				else
+				else if((strncmp(CMD_START_RECORD, data.text, strlen(CMD_START_RECORD)) == 0)
 				{
-					strcpy(text_out,"s;0");
-				}
-			}
-			else if(strstr(data.text, CMD_08_LIGHT_VOICE_MIC)!=NULL)
-			{
-				//set vol from main process
-				printf(LOG_PREFX"set vol %s\n",data.text+7);
-				vol=atoi(data.text+7);
-				memcpy(vol_str,data.text+7,3);
-				//set to low layer
-				memcpy(text_out,data.text,strlen(data.text));
-			}
-			else if((strncmp(CMD_10_LIGHT_OFF_MIC, data.text, strlen(CMD_10_LIGHT_OFF_MIC)) == 0)||
-			{		(strncmp(CMD_14_LIGHT_MODE_MIC, data.text, strlen(CMD_14_LIGHT_MODE_MIC)) == 0)||
-					(strncmp(CMD_15_SAVE_MODE_ON_MIC, data.text, strlen(CMD_15_SAVE_MODE_ON_MIC)) == 0)||
-					(strncmp(CMD_16_SAVE_MODE_OFF_MIC, data.text, strlen(CMD_16_SAVE_MODE_OFF_MIC)) == 0))
-				//get vol from audio sub system 
-				printf(LOG_PREFX"get vol \n");
-				memcpy(text_out,data.text,6);
-				strcat(text_out,";");
-				strcat(text_out,vol_str);
-			}
-			else if(strncmp(CMD_21_RING_NOW_ARM, data.text, strlen(CMD_21_RING_NOW_ARM)) == 0)
-			{
-				//ring
-				if(!(*audio_system_state&MUSIC_PLAY_START))
-				{
-					*audio_system_state|=MUSIC_PLAY_START;
-					printf(LOG_PREFX"ring coming %s\n",data.text);
-					int cur_vol=strchr(data.text,';');
-				}
-				else
-				{
-					printf(LOG_PREFX"already in music playing ,please wait %s\n",data.text);	
-					strcpy(text_out,"b;21;w;0");
-					send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
-				}
-				
-			}
-			else if(strlen(data.text)>7) 
-			{				
-				char mach_play_stop[8]={0};
-				memcpy(mach_play_stop,data.text,7);
-				if(fnmatch(CMD_01_MUSIC_PLAY, mach_play_stop, FNM_PATHNAME) == 0)
-				{	
-					if(!(*audio_system_state&MUSIC_PLAY_START))
+					//audio record
+					if((!(*audio_system_state&MUSIC_RECORD_START)) && (grammar_id!=NULL))
 					{
-						//play music from web,mcu,bluetooth
-						printf(LOG_PREFX"play music from web,mcu,bluetooth %s\n",data.text+7);
-						*audio_system_state|=MUSIC_PLAY_START;
+						*audio_system_state|=MUSIC_RECORD_START;
+						strcpy(text_out,"s;1");
 						if((fpid=fork())==0)
 						{
 							char *audio_state=(char *)shmat(shmid, 0, 0);
-							memcpy(text_out,mach_play_stop,7);
-							if(playback(msgid,data.text+7)==1)
+							rec(record_file);
+							get_from_server(grammar_id,record_file,&rec_result);
+							if(rec_result!=NULL)
 							{
-								strcat(text_out,"1");
+								char *tmp=strrchr(rec_result,'=');
+								if(tmp!=NULL)
+								{
+									strcpy(res,"r;");
+									strcat(res,tmp+1);
+									printf(LOG_PREFX"res %s\n",res);
+								}
+								else
+									memset(res,'\0',256);
+								free(rec_result);
+								rec_result=NULL;
 							}
-							else
-							{
-								strcat(text_out,"0");
-							}
-							*audio_state&=~MUSIC_PLAY_START;
+							*audio_state&=~MUSIC_RECORD_START;
 							shmdt(audio_state);
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+							if(strlen(res)==0)
+								strcat(res,"r;failed");
+							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,res);
 							exit(0);
 						}
 					}
 					else
 					{
-						printf(LOG_PREFX"already in music playing ,please wait %s\n",data.text+7);						
-						memcpy(text_out,mach_play_stop,7);
-						strcat(text_out,"0");
-						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+						strcpy(text_out,"s;0");
 					}
 				}
-				else if(fnmatch(CMD_02_MUSIC_STOP, mach_play_stop, FNM_PATHNAME) == 0)
+				else if(strstr(data.text, CMD_08_LIGHT_VOICE_MIC)!=NULL)
 				{
-					//stop play music
-					printf(LOG_PREFX"stop play music\n");
-					if(*audio_system_state&MUSIC_PLAY_START)
-					{
-						send_msg(msgid,TYPE_LOCAL_STOP_PLAYBACK,0,NULL);
-						ms_sleep(1);
-						*audio_system_state&=~MUSIC_PLAY_START;
-					}
-					memcpy(text_out,mach_play_stop,6);
-				}				
-			}
-			if(strlen(data.text)>4)
-			{
-				if(strncmp(data.text+2,"01",2)!=0)
-				send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
-			}				
-			#if 0
-			switch (data.text[XXX_OFS])
-			{
-				case PROC_RECORD://start rec
-				{
-					switch (data.text[YYY_OFS])
-					{
-						case CMD_START_RECORD:
-						{
-							strcpy(err_msg,ACK_XF_RECORD_RESULT);
-							if((!(audio_system_state&STATE_START_RECORD)))
-							{
-								audio_system_state|=STATE_START_RECORD;
-								audio_system_state&=~STATE_STOP_RECORD;
-								if((fpid=fork())==0)
-								{
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_RECORD_START);
-									rec(msgid,record_file);
-									exit(0);
-								}
-							}
-							else
-							{
-								strcat(err_msg,"already in recording ...");
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-							}
-						}
-						break;
-						case CMD_STOP_RECORD:
-						{
-							strcpy(err_msg,ACK_XF_RECORD_RESULT);
-							if(!(audio_system_state&STATE_STOP_RECORD)&&(audio_system_state&STATE_START_RECORD))
-							{
-								send_msg(msgid,TYPE_LOCAL_STOP_RECORD,0,NULL);
-								ms_sleep(1);
-								//if((fpid=fork())==0)
-								{
-									get_from_server(record_file,&rec_result);
-									if(rec_result!=NULL)
-									{
-										char *tmp=strrchr(rec_result,'=');
-										if(tmp!=NULL)
-										{
-											strcpy(res,tmp+1);
-											printf(LOG_PREFX"res %s\n",res);
-										}
-										else
-											memset(res,'\0',256);
-										free(rec_result);
-										rec_result=NULL;
-									}
-									char cmd[256];
-									strcpy(cmd,"rm ");
-									strcat(cmd,record_file);
-									system(cmd);
-									audio_system_state|=STATE_STOP_RECORD;
-									audio_system_state&=~STATE_START_RECORD;
-									//exit(0);
-								}
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_RECORD_STOP);
-							}
-							else
-							{
-								strcat(err_msg,"already in stoped ...");
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-							}
-						}
-						break;
-						case CMD_CHECK_RECORD:
-						{
-							char result[256]={0};
-							strcpy(result,ACK_XF_RECORD_RESULT);
-							printf(LOG_PREFX"res is %s\n",res);
-							if(strlen(res)!=0)
-								strcat(result,res);
-							else
-								strcat(result,"0");
-							memset(res,'\0',256);
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,result);
-						}
-						break;
-						default:
-							break;
-					}
+					//set vol from main process
+					printf(LOG_PREFX"set vol %s\n",data.text+7);
+					vol=atoi(data.text+7);
+					memcpy(vol_str,data.text+7,3);
+					//set to low layer
+					memcpy(text_out,data.text,strlen(data.text));
 				}
-				break;
-				case PROC_PLAYBACK:
+				else if((strncmp(CMD_10_LIGHT_OFF_MIC, data.text, strlen(CMD_10_LIGHT_OFF_MIC)) == 0)||
+				{		(strncmp(CMD_14_LIGHT_MODE_MIC, data.text, strlen(CMD_14_LIGHT_MODE_MIC)) == 0)||
+						(strncmp(CMD_15_SAVE_MODE_ON_MIC, data.text, strlen(CMD_15_SAVE_MODE_ON_MIC)) == 0)||
+						(strncmp(CMD_16_SAVE_MODE_OFF_MIC, data.text, strlen(CMD_16_SAVE_MODE_OFF_MIC)) == 0))
+					//get vol from audio sub system 
+					printf(LOG_PREFX"get vol \n");
+					memcpy(text_out,data.text,6);
+					strcat(text_out,";");
+					strcat(text_out,vol_str);
+				}
+				else if(strncmp(CMD_21_RING_NOW_ARM, data.text, strlen(CMD_21_RING_NOW_ARM)) == 0)
 				{
-					int len=strlen(data.text)-2;
-					strcpy(err_msg,ACK_PLAYBACK_LOCAL_FAILED);
-					if(!((audio_system_state&STATE_XF_PLAYBACK_BEGIN)||(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)))
+					//ring
+					if(!(*audio_system_state&MUSIC_PLAY_START))
 					{
-						if(len!=0)
-						{						
-							char *play_file=(char *)malloc(len+1);
-							memset(play_file,'\0',len+1);
-							memcpy(play_file,data.text+2,len);
-							audio_system_state|=STATE_PLAYBACK_LOCAL_BEGIN;
-							audio_system_state&=~STATE_PLAYBACK_LOCAL_END;							
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_START);
-							//if((fpid=fork())==0)
-							{
-								if(playback(play_file)==1)
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_STOP);
-								else
-								{
-									strcat(err_msg,"play back local file failed");
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-								}
-								free(play_file);
-							}						
-							audio_system_state&=~STATE_PLAYBACK_LOCAL_BEGIN;
-							audio_system_state|=STATE_PLAYBACK_LOCAL_END;							
-						}
-						else
-						{
-							if(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_START);
-							else
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_STOP);
-						}
-						
+						*audio_system_state|=MUSIC_PLAY_START;
+						printf(LOG_PREFX"ring coming %s\n",data.text);
+						int cur_vol=strchr(data.text,';');
 					}
 					else
 					{
-						strcat(err_msg,"already in xf playcking or local playbacking...");
-						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-					}	
+						printf(LOG_PREFX"already in music playing ,please wait %s\n",data.text);	
+						strcpy(text_out,"b;21;w;0");
+						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+					}
 					
 				}
-				break;
-				case XF_PLAYBACK:
-				{
-					int len=strlen(data.text)-2;
-					strcpy(err_msg,ACK_PLAYBACK_XF_FAILED);
-					if(!((audio_system_state&STATE_XF_PLAYBACK_BEGIN)||(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)))
-					{
-						if(len!=0)
+				else if(strlen(data.text)>7) 
+				{		
+					//music play or stop
+					char mach_play_stop[8]={0};
+					memcpy(mach_play_stop,data.text,7);
+					if(fnmatch(CMD_01_MUSIC_PLAY, mach_play_stop, FNM_PATHNAME) == 0)
+					{	
+						if(!(*audio_system_state&MUSIC_PLAY_START))
 						{
-							char *audio_string=(char *)malloc(len+1);
-							memset(audio_string,'\0',len+1);
-							memcpy(audio_string,data.text+2,len);
-							audio_system_state|=STATE_XF_PLAYBACK_BEGIN;
-							audio_system_state&=~STATE_XF_PLAYBACK_END;							
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_START);
-							//if((fpid=fork())==0)
+							//play music from web,mcu,bluetooth
+							printf(LOG_PREFX"play music from web,mcu,bluetooth %s\n",data.text+7);
+							*audio_system_state|=MUSIC_PLAY_START;
+							if((fpid=fork())==0)
 							{
-								if(play(audio_string,playback_file)==0)
+								char *audio_state=(char *)shmat(shmid, 0, 0);
+								memcpy(text_out,mach_play_stop,7);
+								if(playback(msgid,data.text+7,0,0)==1)
 								{
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_STOP);
-									if(playback(playback_file)==1)
-										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_OK);
-									else
-									{
-										strcat(err_msg,"play back xf file failed");
-										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-									}
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_UNDO);
+									strcat(text_out,"1");
 								}
 								else
 								{
-									strcat(err_msg,"server do xf failed, ");
-									strcat(err_msg,audio_string);
+									strcat(text_out,"0");
+								}
+								*audio_state&=~MUSIC_PLAY_START;
+								shmdt(audio_state);
+								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+								exit(0);
+							}
+						}
+						else
+						{
+							printf(LOG_PREFX"already in music playing ,please wait %s\n",data.text+7);						
+							memcpy(text_out,mach_play_stop,7);
+							strcat(text_out,"0");
+							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+						}
+					}
+					else if(fnmatch(CMD_02_MUSIC_STOP, mach_play_stop, FNM_PATHNAME) == 0)
+					{
+						//stop play music
+						printf(LOG_PREFX"stop play music\n");
+						if(*audio_system_state&MUSIC_PLAY_START)
+						{
+							send_msg(msgid,TYPE_LOCAL_STOP_PLAYBACK,0,NULL);
+							ms_sleep(1);
+							*audio_system_state&=~MUSIC_PLAY_START;
+						}
+						memcpy(text_out,mach_play_stop,6);
+					}				
+				}
+				if(strlen(data.text)>4)
+				{
+					if(strncmp(data.text+2,"01",2)!=0)
+						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+				}				
+				#if 0
+				switch (data.text[XXX_OFS])
+				{
+					case PROC_RECORD://start rec
+					{
+						switch (data.text[YYY_OFS])
+						{
+							case CMD_START_RECORD:
+							{
+								strcpy(err_msg,ACK_XF_RECORD_RESULT);
+								if((!(audio_system_state&STATE_START_RECORD)))
+								{
+									audio_system_state|=STATE_START_RECORD;
+									audio_system_state&=~STATE_STOP_RECORD;
+									if((fpid=fork())==0)
+									{
+										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_RECORD_START);
+										rec(msgid,record_file);
+										exit(0);
+									}
+								}
+								else
+								{
+									strcat(err_msg,"already in recording ...");
 									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
 								}
-								free(audio_string);
-								audio_system_state&=~STATE_XF_PLAYBACK_BEGIN;
-								audio_system_state|=STATE_XF_PLAYBACK_END; 						
+							}
+							break;
+							case CMD_STOP_RECORD:
+							{
+								strcpy(err_msg,ACK_XF_RECORD_RESULT);
+								if(!(audio_system_state&STATE_STOP_RECORD)&&(audio_system_state&STATE_START_RECORD))
+								{
+									send_msg(msgid,TYPE_LOCAL_STOP_RECORD,0,NULL);
+									ms_sleep(1);
+									//if((fpid=fork())==0)
+									{
+										get_from_server(record_file,&rec_result);
+										if(rec_result!=NULL)
+										{
+											char *tmp=strrchr(rec_result,'=');
+											if(tmp!=NULL)
+											{
+												strcpy(res,tmp+1);
+												printf(LOG_PREFX"res %s\n",res);
+											}
+											else
+												memset(res,'\0',256);
+											free(rec_result);
+											rec_result=NULL;
+										}
+										char cmd[256];
+										strcpy(cmd,"rm ");
+										strcat(cmd,record_file);
+										system(cmd);
+										audio_system_state|=STATE_STOP_RECORD;
+										audio_system_state&=~STATE_START_RECORD;
+										//exit(0);
+									}
+									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_RECORD_STOP);
+								}
+								else
+								{
+									strcat(err_msg,"already in stoped ...");
+									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
+								}
+							}
+							break;
+							case CMD_CHECK_RECORD:
+							{
+								char result[256]={0};
+								strcpy(result,ACK_XF_RECORD_RESULT);
+								printf(LOG_PREFX"res is %s\n",res);
+								if(strlen(res)!=0)
+									strcat(result,res);
+								else
+									strcat(result,"0");
+								memset(res,'\0',256);
+								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,result);
+							}
+							break;
+							default:
+								break;
+						}
+					}
+					break;
+					case PROC_PLAYBACK:
+					{
+						int len=strlen(data.text)-2;
+						strcpy(err_msg,ACK_PLAYBACK_LOCAL_FAILED);
+						if(!((audio_system_state&STATE_XF_PLAYBACK_BEGIN)||(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)))
+						{
+							if(len!=0)
+							{						
+								char *play_file=(char *)malloc(len+1);
+								memset(play_file,'\0',len+1);
+								memcpy(play_file,data.text+2,len);
+								audio_system_state|=STATE_PLAYBACK_LOCAL_BEGIN;
+								audio_system_state&=~STATE_PLAYBACK_LOCAL_END;							
+								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_START);
+								//if((fpid=fork())==0)
+								{
+									if(playback(play_file)==1)
+										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_STOP);
+									else
+									{
+										strcat(err_msg,"play back local file failed");
+										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
+									}
+									free(play_file);
+								}						
+								audio_system_state&=~STATE_PLAYBACK_LOCAL_BEGIN;
+								audio_system_state|=STATE_PLAYBACK_LOCAL_END;							
+							}
+							else
+							{
+								if(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)
+									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_START);
+								else
+									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_STOP);
 							}
 							
 						}
 						else
 						{
-							strcat(err_msg,"audio_string is null");
+							strcat(err_msg,"already in xf playcking or local playbacking...");
+							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
+						}	
+						
+					}
+					break;
+					case XF_PLAYBACK:
+					{
+						int len=strlen(data.text)-2;
+						strcpy(err_msg,ACK_PLAYBACK_XF_FAILED);
+						if(!((audio_system_state&STATE_XF_PLAYBACK_BEGIN)||(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)))
+						{
+							if(len!=0)
+							{
+								char *audio_string=(char *)malloc(len+1);
+								memset(audio_string,'\0',len+1);
+								memcpy(audio_string,data.text+2,len);
+								audio_system_state|=STATE_XF_PLAYBACK_BEGIN;
+								audio_system_state&=~STATE_XF_PLAYBACK_END;							
+								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_START);
+								//if((fpid=fork())==0)
+								{
+									if(play(audio_string,playback_file)==0)
+									{
+										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_STOP);
+										if(playback(playback_file)==1)
+											send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_OK);
+										else
+										{
+											strcat(err_msg,"play back xf file failed");
+											send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
+										}
+										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_UNDO);
+									}
+									else
+									{
+										strcat(err_msg,"server do xf failed, ");
+										strcat(err_msg,audio_string);
+										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
+									}
+									free(audio_string);
+									audio_system_state&=~STATE_XF_PLAYBACK_BEGIN;
+									audio_system_state|=STATE_XF_PLAYBACK_END; 						
+								}
+								
+							}
+							else
+							{
+								strcat(err_msg,"audio_string is null");
+								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
+							}
+						}
+						else
+						{
+							strcat(err_msg,"already in xf playcking or local playbacking...");
 							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
 						}
+						
 					}
-					else
-					{
-						strcat(err_msg,"already in xf playcking or local playbacking...");
-						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-					}
-					
-				}
-				break;
-				default:
 					break;
+					default:
+						break;
+				}
+				#endif
 			}
-			#endif
-		}
 		}
 		else
 		{
