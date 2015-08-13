@@ -529,6 +529,7 @@ int main(int argc, char *argv[])
 					vol=atoi(data.text+7);
 					memcpy(vol_str,data.text+7,3);
 					//set to low layer
+					set_vol(vol);
 					memcpy(text_out,data.text,strlen(data.text));
 				}
 				else if((strncmp(CMD_10_LIGHT_OFF_MIC, data.text, strlen(CMD_10_LIGHT_OFF_MIC)) == 0)||
@@ -548,7 +549,63 @@ int main(int argc, char *argv[])
 					{
 						*audio_system_state|=MUSIC_PLAY_START;
 						printf(LOG_PREFX"ring coming %s\n",data.text);
-						int cur_vol=strchr(data.text,';');
+						char *index=strchr(data.text,';');
+						char file_name[64]={0},vol_cur[64]={0},blance[64]={0},step[64]={0};
+						int i=1,j=0,vol_i,step_i;
+						while(index[i]!=';' && index[i]!='\0')
+						{
+							file_name[j++]=index[i++];							
+						}
+						printf(LOG_PREFX"file name is %s\n",file_name);
+						if(index[i]!='\0')
+						{
+							i++;
+							j=0;
+							while(index[i]!=';' && index[i]!='\0')
+							{
+								vol_cur[j++]=index[i++];
+							}
+							printf(LOG_PREFX"vol_cur is %s\n",vol_cur);
+						}
+						else
+							printf(LOG_PREFX"can not get vol\n");
+						
+						if(index[i]!='\0')
+						{
+							i++;
+							j=0
+							while(index[i]!=';' && index[i]!='\0')
+							{
+								blance[j++]=index[i++];
+							}
+							printf(LOG_PREFX"blance is %s\n",blance);
+						}
+						else
+							printf(LOG_PREFX"can not get blance\n");
+						if(index[i]!='\0')
+						{
+							i++;
+							j=0
+							while(index[i]!=';' && index[i]!='\0')
+							{
+								step[j++]=index[i++];
+							}
+							printf(LOG_PREFX"step is %s\n",step);
+						}
+						else
+							printf(LOG_PREFX"can not get step\n");
+						int freq=atoi(strrchr(data.text,';')+1);
+						vol_i=atoi(vol_cur);
+						step_i=atoi(step);
+						if((strlen(step)!=0) && (strlen(vol_cur)!=0) && (strlen(file_name)!=0))
+						if((fpid=fork())==0)
+						{	
+							for(i=0;i<freq;i++)
+							playback(msgid,file_name,vol_i,step_i);
+							*audio_system_state&=~MUSIC_PLAY_START;
+							set_vol(vol);
+							exit(0);
+						}
 					}
 					else
 					{
@@ -613,197 +670,10 @@ int main(int argc, char *argv[])
 				{
 					if(strncmp(data.text+2,"01",2)!=0)
 						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
-				}				
-				#if 0
-				switch (data.text[XXX_OFS])
-				{
-					case PROC_RECORD://start rec
-					{
-						switch (data.text[YYY_OFS])
-						{
-							case CMD_START_RECORD:
-							{
-								strcpy(err_msg,ACK_XF_RECORD_RESULT);
-								if((!(audio_system_state&STATE_START_RECORD)))
-								{
-									audio_system_state|=STATE_START_RECORD;
-									audio_system_state&=~STATE_STOP_RECORD;
-									if((fpid=fork())==0)
-									{
-										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_RECORD_START);
-										rec(msgid,record_file);
-										exit(0);
-									}
-								}
-								else
-								{
-									strcat(err_msg,"already in recording ...");
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-								}
-							}
-							break;
-							case CMD_STOP_RECORD:
-							{
-								strcpy(err_msg,ACK_XF_RECORD_RESULT);
-								if(!(audio_system_state&STATE_STOP_RECORD)&&(audio_system_state&STATE_START_RECORD))
-								{
-									send_msg(msgid,TYPE_LOCAL_STOP_RECORD,0,NULL);
-									ms_sleep(1);
-									//if((fpid=fork())==0)
-									{
-										get_from_server(record_file,&rec_result);
-										if(rec_result!=NULL)
-										{
-											char *tmp=strrchr(rec_result,'=');
-											if(tmp!=NULL)
-											{
-												strcpy(res,tmp+1);
-												printf(LOG_PREFX"res %s\n",res);
-											}
-											else
-												memset(res,'\0',256);
-											free(rec_result);
-											rec_result=NULL;
-										}
-										char cmd[256];
-										strcpy(cmd,"rm ");
-										strcat(cmd,record_file);
-										system(cmd);
-										audio_system_state|=STATE_STOP_RECORD;
-										audio_system_state&=~STATE_START_RECORD;
-										//exit(0);
-									}
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_RECORD_STOP);
-								}
-								else
-								{
-									strcat(err_msg,"already in stoped ...");
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-								}
-							}
-							break;
-							case CMD_CHECK_RECORD:
-							{
-								char result[256]={0};
-								strcpy(result,ACK_XF_RECORD_RESULT);
-								printf(LOG_PREFX"res is %s\n",res);
-								if(strlen(res)!=0)
-									strcat(result,res);
-								else
-									strcat(result,"0");
-								memset(res,'\0',256);
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,result);
-							}
-							break;
-							default:
-								break;
-						}
-					}
-					break;
-					case PROC_PLAYBACK:
-					{
-						int len=strlen(data.text)-2;
-						strcpy(err_msg,ACK_PLAYBACK_LOCAL_FAILED);
-						if(!((audio_system_state&STATE_XF_PLAYBACK_BEGIN)||(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)))
-						{
-							if(len!=0)
-							{						
-								char *play_file=(char *)malloc(len+1);
-								memset(play_file,'\0',len+1);
-								memcpy(play_file,data.text+2,len);
-								audio_system_state|=STATE_PLAYBACK_LOCAL_BEGIN;
-								audio_system_state&=~STATE_PLAYBACK_LOCAL_END;							
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_START);
-								//if((fpid=fork())==0)
-								{
-									if(playback(play_file)==1)
-										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_STOP);
-									else
-									{
-										strcat(err_msg,"play back local file failed");
-										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-									}
-									free(play_file);
-								}						
-								audio_system_state&=~STATE_PLAYBACK_LOCAL_BEGIN;
-								audio_system_state|=STATE_PLAYBACK_LOCAL_END;							
-							}
-							else
-							{
-								if(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_START);
-								else
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_STOP);
-							}
-							
-						}
-						else
-						{
-							strcat(err_msg,"already in xf playcking or local playbacking...");
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-						}	
-						
-					}
-					break;
-					case XF_PLAYBACK:
-					{
-						int len=strlen(data.text)-2;
-						strcpy(err_msg,ACK_PLAYBACK_XF_FAILED);
-						if(!((audio_system_state&STATE_XF_PLAYBACK_BEGIN)||(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)))
-						{
-							if(len!=0)
-							{
-								char *audio_string=(char *)malloc(len+1);
-								memset(audio_string,'\0',len+1);
-								memcpy(audio_string,data.text+2,len);
-								audio_system_state|=STATE_XF_PLAYBACK_BEGIN;
-								audio_system_state&=~STATE_XF_PLAYBACK_END;							
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_START);
-								//if((fpid=fork())==0)
-								{
-									if(play(audio_string,playback_file)==0)
-									{
-										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_STOP);
-										if(playback(playback_file)==1)
-											send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_OK);
-										else
-										{
-											strcat(err_msg,"play back xf file failed");
-											send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-										}
-										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_UNDO);
-									}
-									else
-									{
-										strcat(err_msg,"server do xf failed, ");
-										strcat(err_msg,audio_string);
-										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-									}
-									free(audio_string);
-									audio_system_state&=~STATE_XF_PLAYBACK_BEGIN;
-									audio_system_state|=STATE_XF_PLAYBACK_END; 						
-								}
-								
-							}
-							else
-							{
-								strcat(err_msg,"audio_string is null");
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-							}
-						}
-						else
-						{
-							strcat(err_msg,"already in xf playcking or local playbacking...");
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-						}
-						
-					}
-					break;
-					default:
-						break;
 				}
-				#endif
 			}
+			else
+				printf(LOG_PREFX"wrong id\n");
 		}
 		else
 		{
@@ -814,7 +684,7 @@ int main(int argc, char *argv[])
 				//exit(-1);  
 			}
 			else
-			printf(LOG_PREFX"msgid %d\n",msgid);			
+				printf(LOG_PREFX"new msgid %d\n",msgid);			
 			ms_sleep(1);
 		}
 	}
