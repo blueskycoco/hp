@@ -282,7 +282,10 @@ int playback(int msgid,char *filename,int vol,int step)
 		while (done != TRUE) 
 		{
 			if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_LOCAL_STOP_PLAYBACK, IPC_NOWAIT)>0)
+			{
+				ret=3;
 				break;
+			}
 			if(step!=0)
 			{
 				set_vol(vol+step*i);
@@ -297,7 +300,8 @@ int playback(int msgid,char *filename,int vol,int step)
 		if(ticker1) ms_ticker_destroy(ticker1);
 		if(f1_w) ms_filter_destroy(f1_w);
 		if(play) ms_filter_destroy(play);
-		ret=1;
+		if(ret==0)
+			ret=1;
 	}	
 	return ret;
 }
@@ -538,6 +542,17 @@ int main(int argc, char *argv[])
 					strcat(text_out,";");
 					strcat(text_out,vol_str);
 				}
+				else if(strncmp(CMD_20_RING_DELAY, data.text, strlen(CMD_20_RING_DELAY)) == 0)
+				{
+						printf(LOG_PREFX"stop play ring\n");
+						if(*audio_system_state&MUSIC_PLAY_START)
+						{
+							send_msg(msgid,TYPE_LOCAL_STOP_PLAYBACK,0,NULL);
+							ms_sleep(1);
+							*audio_system_state&=~MUSIC_PLAY_START;
+						}
+						strcpy(text_out,"20;1");
+				}
 				else if(strncmp(CMD_21_RING_NOW_ARM, data.text, strlen(CMD_21_RING_NOW_ARM)) == 0)
 				{
 					//ring
@@ -597,9 +612,13 @@ int main(int argc, char *argv[])
 						{
 							if((fpid=fork())==0)
 							{	
+								char *audio_state=(char *)shmat(shmid, 0, 0);
 								for(i=0;i<freq;i++)
-								playback(msgid,file_name,vol_i,step_i);
-								*audio_system_state&=~MUSIC_PLAY_START;
+								{
+									if(playback(msgid,file_name,vol_i,step_i)==3)
+										break;
+								}
+								*audio_state&=~MUSIC_PLAY_START;
 								set_vol(vol);
 								strcpy(text_out,"b;21;w;2");
 								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
