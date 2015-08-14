@@ -261,7 +261,7 @@ int playback(int msgid,char *filename,int vol,int step)
 	play=ms_filter_new(MS_FILE_PLAYER_ID);
 	if(ms_filter_call_method(play,MS_FILE_PLAYER_OPEN,(void*)filename)!=0)
 	{
-		printf("play open file %s failed\n",filename);
+		printf(LOG_PREFX"play open file %s failed\n",filename);
 		return 0;
 	}
 	ms_filter_set_notify_callback(play, fileplay_eof, &done);
@@ -271,9 +271,9 @@ int playback(int msgid,char *filename,int vol,int step)
 		ms_filter_call_method(play, MS_FILTER_GET_SAMPLE_RATE, &rate);
 		ms_filter_call_method(play, MS_FILTER_GET_NCHANNELS, &nchan);
 		if(ms_filter_call_method(f1_w, MS_FILTER_SET_SAMPLE_RATE,	&rate)!=0)
-			printf("set sample rate f1_r failed\n");
+			printf(LOG_PREFX"set sample rate f1_r failed\n");
 		if(ms_filter_call_method(f1_w, MS_FILTER_SET_NCHANNELS,&nchan)!=0)
-			printf("set sample rate record failed\n");
+			printf(LOG_PREFX"set sample rate record failed\n");
 		ms_filter_call_method_noarg(play,MS_FILE_PLAYER_START);
 		ticker1=ms_ticker_new();
 		ms_ticker_set_name(ticker1,"card1 to card2");
@@ -314,27 +314,27 @@ int text_to_speech(const char* src_text ,const char* des_path ,const char* param
 	FILE* fp = NULL;
 	if (NULL == src_text || NULL == des_path)
 	{
-		printf("params is null!\n");
+		printf(LOG_PREFX"params is null!\n");
 		return -1;
 	}
 	text_len = (unsigned int)strlen(src_text);
 	fp = fopen(des_path,"wb");
 	if (NULL == fp)
 	{
-		printf("open file %s error\n",des_path);
+		printf(LOG_PREFX"open file %s error\n",des_path);
 		return -1;
 	}
 	sess_id = QTTSSessionBegin(params, &ret);
 	if ( ret != MSP_SUCCESS )
 	{
-		printf("QTTSSessionBegin: qtts begin session failed Error code %d.\n",ret);
+		printf(LOG_PREFX"QTTSSessionBegin: qtts begin session failed Error code %d.\n",ret);
 		return ret;
 	}
 
 	ret = QTTSTextPut(sess_id, src_text, text_len, NULL );
 	if ( ret != MSP_SUCCESS )
 	{
-		printf("QTTSTextPut: qtts put text failed Error code %d.\n",ret);
+		printf(LOG_PREFX"QTTSTextPut: qtts put text failed Error code %d.\n",ret);
 		QTTSSessionEnd(sess_id, "TextPutError");
 		return ret;
 	}
@@ -362,7 +362,7 @@ int text_to_speech(const char* src_text ,const char* des_path ,const char* param
 	ret = QTTSSessionEnd(sess_id, NULL);
 	if ( ret != MSP_SUCCESS )
 	{
-		printf("QTTSSessionEnd: qtts end failed Error code %d.\n",ret);
+		printf(LOG_PREFX"QTTSSessionEnd: qtts end failed Error code %d.\n",ret);
 	}
 	//printf("\nTTS end...\n");
 	return ret;
@@ -379,13 +379,13 @@ int play(const char *string,const char *filename)
 	ret = MSPLogin(NULL, NULL, login_configs);
 	if ( ret != MSP_SUCCESS )
 	{
-		printf("MSPLogin failed , Error code %d.\n",ret);
+		printf(LOG_PREFX"MSPLogin failed , Error code %d.\n",ret);
 		return ret;
 	}
 	ret = text_to_speech(string,filename,param);
 	if ( ret != MSP_SUCCESS )
 	{
-		printf("text_to_speech: failed , Error code %d.\n",ret);
+		printf(LOG_PREFX"text_to_speech: failed , Error code %d.\n",ret);
 	}
 	MSPLogout();
 	return ret;
@@ -448,7 +448,7 @@ int main(int argc, char *argv[])
 		strcpy(playback_file,argv[2]);
 	if((shmid = shmget(IPC_PRIVATE, 2, PERM)) == -1 )
 	{
-        fprintf(stderr, "Create Share Memory Error:%s/n/a", strerror(errno));  
+        fprintf(stderr, LOG_PREFX"Create Share Memory Error:%s/n/a", strerror(errno));  
         exit(1);  
     }  
 	audio_system_state = (char *)shmat(shmid, 0, 0);
@@ -519,24 +519,22 @@ int main(int argc, char *argv[])
 						strcpy(text_out,"s;0");
 					}
 				}
-				else if(strstr(data.text, CMD_08_LIGHT_VOICE_MIC)!=NULL)
+				else if(strstr(data.text, CMD_51_SET_VOL)!=NULL)
 				{
 					//set vol from main process
-					printf(LOG_PREFX"set vol %s\n",data.text+7);
-					vol=atoi(data.text+7);
-					memcpy(vol_str,data.text+7,3);
+					printf(LOG_PREFX"set vol %s\n",data.text+3);
+					vol=atoi(data.text+3);
+					memcpy(vol_str,data.text+3,strlen(data.text)-3);
 					//set to low layer
 					set_vol(vol);
-					memcpy(text_out,data.text,strlen(data.text));
+					memcpy(text_out,data.text,3);
+					strcat(text_out,"0");
 				}
-				else if((strncmp(CMD_10_LIGHT_OFF_MIC, data.text, strlen(CMD_10_LIGHT_OFF_MIC)) == 0)||
-						(strncmp(CMD_14_LIGHT_MODE_MIC, data.text, strlen(CMD_14_LIGHT_MODE_MIC)) == 0)||
-						(strncmp(CMD_15_SAVE_MODE_ON_MIC, data.text, strlen(CMD_15_SAVE_MODE_ON_MIC)) == 0)||
-						(strncmp(CMD_16_SAVE_MODE_OFF_MIC, data.text, strlen(CMD_16_SAVE_MODE_OFF_MIC)) == 0))
+				else if(strncmp(CMD_50_GET_VOL, data.text, strlen(CMD_50_GET_VOL)) == 0)
 				{
 					//get vol from audio sub system 
 					printf(LOG_PREFX"get vol \n");
-					memcpy(text_out,data.text,6);
+					memcpy(text_out,data.text,2);
 					strcat(text_out,";");
 					strcat(text_out,vol_str);
 				}
@@ -596,13 +594,23 @@ int main(int argc, char *argv[])
 						vol_i=atoi(vol_cur);
 						step_i=atoi(step);
 						if((strlen(step)!=0) && (strlen(vol_cur)!=0) && (strlen(file_name)!=0))
-						if((fpid=fork())==0)
+						{
+							if((fpid=fork())==0)
+							{	
+								for(i=0;i<freq;i++)
+								playback(msgid,file_name,vol_i,step_i);
+								*audio_system_state&=~MUSIC_PLAY_START;
+								set_vol(vol);
+								strcpy(text_out,"b;21;w;2");
+								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+								exit(0);
+							}
+						}
+						else
 						{	
-							for(i=0;i<freq;i++)
-							playback(msgid,file_name,vol_i,step_i);
-							*audio_system_state&=~MUSIC_PLAY_START;
-							set_vol(vol);
-							exit(0);
+							printf(LOG_PREFX"paramter is wrong %s\n",data.text);	
+							strcpy(text_out,"b;21;w;0");
+							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
 						}
 					}
 					else

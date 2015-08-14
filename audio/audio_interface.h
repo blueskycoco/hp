@@ -39,11 +39,8 @@ typedef short int SR_WORD ;
 
 #define CMD_01_MUSIC_PLAY					"b;01;?;"
 #define CMD_02_MUSIC_STOP					"b;02;?;"
-#define CMD_08_LIGHT_VOICE_MIC				"e;08;a;"
-#define CMD_10_LIGHT_OFF_MIC				"e;10;a;"
-#define CMD_14_LIGHT_MODE_MIC				"e;14;a"
-#define CMD_15_SAVE_MODE_ON_MIC				"e;15;a"
-#define CMD_16_SAVE_MODE_OFF_MIC			"e;16;a"
+#define CMD_50_GET_VOL						"50"
+#define CMD_51_SET_VOL						"51;"
 #define CMD_21_RING_NOW_ARM					"21;"
 #define CMD_START_RECORD					"c;1"
 #define CMD_RCV_GRAMMAR_ID					"c;2;"

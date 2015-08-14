@@ -1,9 +1,3 @@
-#include "mediastreamer2/msfilter.h"
-#include "mediastreamer2/mssndcard.h"
-#include "mediastreamer2/msticker.h"
-#include "mediastreamer2/msfileplayer.h"
-#include "mediastreamer2/msfilerec.h"
-#include <ortp/ortp.h>
 #include <unistd.h>  
 #include <stdlib.h>  
 #include <stdio.h>  
@@ -11,10 +5,6 @@
 #include <errno.h>  
 #include <sys/msg.h>  
 #include <signal.h>
-#include "alsa/qisr.h"
-#include "alsa/msp_cmn.h"
-#include "alsa/msp_errors.h"
-#include "alsa/qtts.h"
 #include <fnmatch.h>
 
 #define TYPE_MAIN_TO_FILE 				0x08
