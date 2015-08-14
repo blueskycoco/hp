@@ -2,7 +2,6 @@
 
 int cancle_rec=0;
 char GrammarID[128];
-unsigned char g_audio_state=STATUS_STOP_RECORD;
 int run_asr(char *grammar_id,const char* asrfile ,  const char* param, unsigned char **rec_result)
 {
 	int result=1;
@@ -204,7 +203,6 @@ void rec(/*int msgid,*/char *filename)
 		ms_filter_link(f1_r,0,record,0);	 	
 		ms_ticker_attach(ticker1,f1_r);
 		//msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_LOCAL_STOP_RECORD, 0);
-		//g_audio_state=STATUS_START_RECORD;
 		ms_sleep(3);
 		ms_filter_call_method(record,MS_FILE_REC_STOP,NULL);
 		ms_filter_call_method(record,MS_FILE_REC_CLOSE,NULL);
@@ -213,7 +211,6 @@ void rec(/*int msgid,*/char *filename)
 		if(ticker1) ms_ticker_destroy(ticker1);
 		if(f1_r) ms_filter_destroy(f1_r);
 		if(record) ms_filter_destroy(record);		
-		//g_audio_state=STATUS_STOP_RECORD;
 	}	
 }
 static void fileplay_eof(void *user_data, MSFilter *f, unsigned int event, void *event_data) {
@@ -483,7 +480,7 @@ int main(int argc, char *argv[])
 					else
 						strcpy(text_out,"r;0");
 				}
-				else if((strncmp(CMD_START_RECORD, data.text, strlen(CMD_START_RECORD)) == 0)
+				else if(strncmp(CMD_START_RECORD, data.text, strlen(CMD_START_RECORD)) == 0)
 				{
 					//audio record
 					if((!(*audio_system_state&MUSIC_RECORD_START)) && (grammar_id!=NULL))
@@ -533,9 +530,10 @@ int main(int argc, char *argv[])
 					memcpy(text_out,data.text,strlen(data.text));
 				}
 				else if((strncmp(CMD_10_LIGHT_OFF_MIC, data.text, strlen(CMD_10_LIGHT_OFF_MIC)) == 0)||
-				{		(strncmp(CMD_14_LIGHT_MODE_MIC, data.text, strlen(CMD_14_LIGHT_MODE_MIC)) == 0)||
+						(strncmp(CMD_14_LIGHT_MODE_MIC, data.text, strlen(CMD_14_LIGHT_MODE_MIC)) == 0)||
 						(strncmp(CMD_15_SAVE_MODE_ON_MIC, data.text, strlen(CMD_15_SAVE_MODE_ON_MIC)) == 0)||
 						(strncmp(CMD_16_SAVE_MODE_OFF_MIC, data.text, strlen(CMD_16_SAVE_MODE_OFF_MIC)) == 0))
+				{
 					//get vol from audio sub system 
 					printf(LOG_PREFX"get vol \n");
 					memcpy(text_out,data.text,6);
@@ -573,7 +571,7 @@ int main(int argc, char *argv[])
 						if(index[i]!='\0')
 						{
 							i++;
-							j=0
+							j=0;
 							while(index[i]!=';' && index[i]!='\0')
 							{
 								blance[j++]=index[i++];
@@ -585,7 +583,7 @@ int main(int argc, char *argv[])
 						if(index[i]!='\0')
 						{
 							i++;
-							j=0
+							j=0;
 							while(index[i]!=';' && index[i]!='\0')
 							{
 								step[j++]=index[i++];

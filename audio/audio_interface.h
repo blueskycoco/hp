@@ -9,7 +9,9 @@
 #include <stdio.h>  
 #include <string.h>  
 #include <errno.h>  
-#include <sys/msg.h>  
+#include <sys/msg.h>
+#include <sys/stat.h>
+#include <fnmatch.h> 
 #include <signal.h>
 #include <sys/ipc.h>  
 #include <sys/shm.h>  
