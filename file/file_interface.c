@@ -66,6 +66,64 @@ int read_file_line(char *file,int line_addr,char prv,char *out)
 	   free(line);
 	return result;
 }
+int write_file_line(char *file,char *alarm_id,char *str)
+{
+	char buf[256]={0};
+	int result=0;
+	char * line = NULL;
+	size_t len = 0;
+	int write_pos=0,read=0,found=0;
+	FILE *fp=fopen(file,"r");
+	fseek(fp,0L,SEEK_END);
+	int flen=ftell(fp);
+	char *file_write;
+	if(strlen(buf)>strlen(str))
+	{
+		file_write=(char *)malloc(flen-strlen(buf)+strlen(str)+1);
+		
+	}
+	else
+	{
+		file_write=(char *)malloc(flen+strlen(str)-strlen(buf)+1);	
+	}
+	
+	while ((read = getline(&line, &len, fp)) != -1) 
+	{	
+		
+	   int i=0;
+		if(strncmp(line,alarm_id,strlen(alarm_id)==0)
+		{
+		  while(line[i]!=';')
+		  {
+			(char *)(file_write+write_pos+i)=line[i];
+			i++;
+		  }
+		  memcpy(file_write+write_pos+i+1,str,strlen(str));
+		  memcpy(file_write+write_pos+i+1+stlen(str),"\r\n",2);
+		  write_pos=write_pos+strlen(str)+3+i;
+		  found=1;
+	   }
+	   else
+	   {
+		   memcpy(file_write+write_pos,line,read);
+	 	   write_pos=write_pos+read;
+	   }
+	   free(line);
+	}
+	fclose(fp);
+	FILE *fp=fopen(file,"w");
+	fwrite(file_write,write_pos,1,fp);	
+	if(found==0)
+	{
+		fwrite(alarm_id,strlen(alarm_id),1,fp);
+		fwrite(';',1,1,fp);
+		fwrite(str,strlen(str),1,fp);
+	}
+	fclose(fp);
+	result=1;
+	
+	return result;	
+}
 int get_file_lines(char *file)
 {
 	FILE *fp;
@@ -121,12 +179,14 @@ int main(int argc, char *argv[])
 		{
 			if(data.id==MAIN_TO_FILE)
 			{
-				if(fnmatch(CMD_00_MUSIC_FIND, data.text, FNM_PATHNAME) == 0)
-				{
+				if(data_text[2]=='0' && data_text[3]=='0')
+				{//00
 					char buf[25]={0};
-					strcat(file_name,"01");
+					strcat(file_name,data.text+7);
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"to open %s\n",file_name);
 					operation=0;
-					memcpy(text_out,data.text,7);
+					memcpy(text_out,data.text,6);
 					text_out[0]='d';
 					int file_line=get_file_lines(file_name);
 					if(file_line==0 || ((file_line%FILE_MUSIC_LINES_RECORD)!=0))
@@ -142,32 +202,171 @@ int main(int argc, char *argv[])
 					}
 					else
 					{
-						strcat(text_out,"music-id ");
-						if(read_file_line(file_name,FILE_MUSIC_NAME_LINE,0,buf))
-							strcat(text_out,buf);
-						else
+						int i;
+						for(i=0;i<file_line;i=i+FILE_MUSIC_LINES_RECORD)
+						{
+							strcat(text_out,";music-id ");
+							if(read_file_line(file_name,i+FILE_MUSIC_NAME_LINE,0,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							memset(buf,'\0',25);
+							strcat(text_out,";music-name ");
+							if(read_file_line(file_name,i+FILE_MUSIC_NAME_LINE,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							memset(buf,'\0',25);
+							strcat(text_out,";singer ");
+							if(read_file_line(file_name,i+FILE_MUSIC_SINGER_LINE,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							memset(buf,'\0',25);
+							strcat(text_out,";music-like/unlike ");
+							if(read_file_line(file_name,i+FILE_MUSIC_LIKE_LINE,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+						}
+						printf(LOG_PREFX"audio list %s\n",text_out);
+					}
+					memset(file_name,'\0',256);
+				}
+				else if(data.text[2]=='0' &&data.text[3]=='1'))
+				{//01
+					char buf[25]={0};
+					char music_id[15]={0};
+					int len=strlen(file_name);
+					int web_pos=0;
+					file_name[len]=data.text[2];
+					file_name[len+1]=data.text[3];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"to open %s\n",file_name);
+					operation=0;	
+					if(fnmatch(CMD_01_MUSIC_PLAY, data.text, FNM_PATHNAME) == 0)
+					{
+						strcpy(text_out,data.text+2);						
+						strcat(text_out,";");
+						strcpy(msuic_id,strrchr(data.text,';')+1);
+					}
+					else
+					{	
+						strcpy(text_out,"01;w;");
+						int i=10
+						while(data.text[i]!=';' && data.text[i]!='\0')
+							music_id[i-10]=data.text[i];
+						strcat(text_out,music_id);
+						strcat(text_out,";");
+						web_pos=i+1;
+					}
+					
+					int file_line=get_file_lines(file_name);
+					if(file_line<FILE_MUSIC_LINES_RECORD)
+					{
+						strcat(text_out,"unknown");
+					}
+					else
+					{
+						int i;
+						for(i=0;i<file_line;i=i+FILE_MUSIC_LINES_RECORD)
+						{
+							read_file_line(file_name,i+FILE_MUSIC_NAME_LINE,0,buf);
+							if(strncmp(buf,music_id,strlen(buf))==0)
+							{
+								read_file_line(file_name,i+FILE_MUSIC_PATH_LINE,1,buf);
+								strcat(text_out,buf);								
+								read_file_line(file_name,i+FILE_MUSIC_NAME_LINE,1,buf);
+								strcat(text_out,buf);
+								if(data.text[0]=='r' &&data.text[5]=='w')
+									strcat(text_out,data.text+web_pos);
+								printf(LOG_PREFX"get music %s\n",text_out);
+								break;
+							}
+						}
+						if(i==file_line)
+						{
 							strcat(text_out,"unknown");
-						memset(buf,'\0',25);
-						strcat(text_out,";music-name ");
-						if(read_file_line(file_name,FILE_MUSIC_NAME_LINE,1,buf))
-							strcat(text_out,buf);
-						else
-							strcat(text_out,"unknown");
-						memset(buf,'\0',25);
-						strcat(text_out,";singer ");
-						if(read_file_line(file_name,FILE_MUSIC_SINGER_LINE,1,buf))
-							strcat(text_out,buf);
-						else
-							strcat(text_out,"unknown");
-						memset(buf,'\0',25);
-						strcat(text_out,";music-like/unlike ");
-						if(read_file_line(file_name,FILE_MUSIC_LIKE_LINE,1,buf))
-							strcat(text_out,buf);
-						else
-							strcat(text_out,"unknown");
+							printf(LOG_PREFX"cant not find music by id %s\n",strrchr(data.text,';')+1);
+						}
 					}
 				}
+				else if(data.text[2]='0' && data.text[3]='3')
+				{//03
 
+				}				
+				else if(data.text[2]='0' && data.text[3]='4')
+				{//04
+
+				}
+				else if(data.text[2]='0' && data.text[3]='5')
+				{//05
+
+				}				
+				else if(data.text[2]='0' && data.text[3]='7')
+				{//07
+
+				}
+				else if(data.text[2]='1' && data.text[3]='1')
+				{//11
+
+				}
+				else if(data.text[2]='1' && data.text[3]='2')
+				{//12
+
+				}
+				else if(data.text[2]='1' && data.text[3]='3')
+				{//13
+
+				}
+				else if(data.text[2]='1' && data.text[3]='4')
+				{//14
+
+				}
+				else if(data.text[2]='1' && data.text[3]='5')
+				{//15
+
+				}
+				else if(data.text[2]='1' && data.text[3]='6')
+				{//16
+
+				}
+				else if(data.text[2]='1' && data.text[3]='7')
+				{//17
+
+				}
+				else if(data.text[2]='1' && data.text[3]='8')
+				{//18
+
+				}
+				else if(data.text[2]='1' && data.text[3]='9')
+				{//19
+
+				}
+				else if(data.text[2]='2' && data.text[3]='0')
+				{//20
+
+				}
+				else if(data.text[2]='2' && data.text[3]='1')
+				{//21
+
+				}
+				else if(data.text[2]='2' && data.text[3]='3')
+				{//23
+
+				}
+				else if(data.text[2]='2' && data.text[3]='4')
+				{//24
+
+				}
+				else if(data.text[2]='2' && data.text[3]='5')
+				{//25
+
+				}
+				else if(data.text[2]='2' && data.text[3]='8')
+				{//28
+
+				}
 				send_msg(msgid,TYPE_FILE_TO_MAIN,FILE_TO_MAIN,text_out);
 			}
 			

@@ -14,8 +14,8 @@
 #define LOG_PREFX 						"[FileSubSystem]:"
 #define CMD_00_MUSIC_FIND				"r;00;b;??"
 #define CMD_01_MUSIC_PLAY				"r;01;"
-#define CMD_01_MUSIC_PLAY_WEB			"r;01;w;01;"
-#define CMD_03_MUSIC_CHOOSE				"w;03;?;04;"
+#define CMD_01_MUSIC_PLAY_WEB			"r;01;w;??;"
+#define CMD_03_MUSIC_CHOOSE				"w;03;?;??;"
 #define CMD_04_MUSIC_LIKE				"w;04;?;02;"
 #define CMD_05_MUSIC_UNLIKE				"w;05;?;02;"
 #define CMD_07_LIGHT_MANUAL				"w;07;?;00;"
@@ -44,6 +44,7 @@
 
 #define FILE_MUSIC_NAME_LINE	1
 #define FILE_MUSIC_SINGER_LINE	2
+#define FILE_MUSIC_PATH_LINE	3
 #define FILE_MUSIC_LIKE_LINE	4
 #define FILE_MUSIC_LINES_RECORD	5
 
