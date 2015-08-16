@@ -47,6 +47,7 @@
 #define FILE_MUSIC_PATH_LINE	3
 #define FILE_MUSIC_LIKE_LINE	4
 #define FILE_MUSIC_LINES_RECORD	5
+#define FILE_LIGHT_LINES_RECORD	7
 
 struct msg_st
 {  
