@@ -1,4 +1,4 @@
-#include "audio_interface.h"
+#include "web_interface.h"
 
 int send_msg(int msgid,unsigned char msg_type,unsigned char id,unsigned char *text)
 {
@@ -259,7 +259,7 @@ int write_file_line(char *file,char *alarm_id,char *str)
 		  memcpy(file_write+write_pos,alarm_id,strlen(alarm_id));
 		  (char *)(file_write+write_pos+strlen(alarm_id))=';';
 		  memcpy(file_write+write_pos+stlen(alarm_id)+1,str,strlen(str));
-		  memcpy(file_write+write_pos+stlen(alarm_id)+1+2+,str,2);
+		  memcpy(file_write+write_pos+stlen(alarm_id)+1+strlen(str),last,2);
 		  write_pos=write_pos+strlen(str)+strlen(alarm_id)+1+2;
 		  found=1;
 	   }
@@ -308,31 +308,31 @@ int write_alert(char *file,int found,char *alarm_id,char *alarm_name,char *alarm
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
 		  (char *)(file_write+write_pos+strlen(a_id))=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_name,strlen(alarm_name));
-		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_name),last,2);
+		  memcpy(file_write+write_pos+stlen(a_id)+1+stlen(alarm_name),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_name);
 		  a_id=a_id+'1';
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
 		  (char *)(file_write+write_pos+strlen(a_id))=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_day,strlen(alarm_day));
-		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_day),last,2);
+		  memcpy(file_write+write_pos+stlen(a_id)+1+stlen(alarm_day),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_day);
 		  a_id=a_id+'1';
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
 		  (char *)(file_write+write_pos+strlen(a_id))=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_time,strlen(alarm_time));
-		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_time),last,2);
+		  memcpy(file_write+write_pos+stlen(a_id)+1+stlen(alarm_time),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_time);
 		  a_id=a_id+'1';
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
 		  (char *)(file_write+write_pos+strlen(a_id))=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_up,strlen(alarm_up));
-		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_up),last,2);
+		  memcpy(file_write+write_pos+stlen(a_id)+1+stlen(alarm_up),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_up);
 		  a_id=a_id+'1';
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
 		  (char *)(file_write+write_pos+strlen(a_id))=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_freq,strlen(alarm_freq));
-		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_freq),last,2);
+		  memcpy(file_write+write_pos+stlen(a_id)+1+stlen(alarm_freq),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_freq);
 		  free(a_id);
 	   }
