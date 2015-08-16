@@ -106,23 +106,146 @@ int set_music_like(char *file,char *music_id,int like)
 	fclose(fp);
 	FILE *fp=fopen(file,"w");
 	fwrite(file_write,write_pos,1,fp);	
-	if(found==0)
-	{
-		fwrite(alarm_id,strlen(alarm_id),1,fp);
-		fwrite(';',1,1,fp);
-		fwrite(str,strlen(str),1,fp);
-	}
 	fclose(fp);
 	result=1;
 	
 	return result;	
 }
+int set_light_use(char *file,char *mode_id,int like)
+{
+	char buf[256]={0};
+	int result=0;
+	char * line = NULL;
+	size_t len = 0;
+	int i;
+	int write_pos=0,read=0,found=0;
+	FILE *fp=fopen(file,"r");
+	fseek(fp,0L,SEEK_END);
+	int flen=ftell(fp);
+	char *file_write;
+	file_write=(char *)malloc(flen);	
+	while ((read = getline(&line, &len, fp)) != -1) 
+	{	
+		if(strncmp(line,mode_id,strlen(mode_id))==0)
+		{		 
+		  found=1;
+		  i=0;
+	   	}
+		if(found==1)
+			i++;
+		if(i==6)
+		{
+			//set use or unuse
+			char *str=strchr(line,';');
+			if(like)
+				str[1]='0';
+			else
+				str[1]='1';
+			found=0;
+			i=0;
+		}
+	   memcpy(file_write+write_pos,line,read);
+ 	   write_pos=write_pos+read;
+	   free(line);
+	}
+	fclose(fp);
+	FILE *fp=fopen(file,"w");
+	fwrite(file_write,write_pos,1,fp);
+	fclose(fp);
+	result=1;
+	
+	return result;	
+}
+int set_year_time(char *file,char *year,char *time)
+{
+	char buf[256]={0};
+	int result=0;
+	char * line = NULL;
+	size_t len = 0;
+	int i;
+	int write_pos=0,read=0,found=0;
+	FILE *fp=fopen(file,"r");
+	fseek(fp,0L,SEEK_END);
+	int flen=ftell(fp);
+	char *file_write;
+	file_write=(char *)malloc(flen);	
+	while ((read = getline(&line, &len, fp)) != -1) 
+	{	
+		if(i==7)
+		{
+			strcpy(line+4,time);
+		}
+		if(i==8)
+		{
+			strcpy(line+4,year);
+		}
+    	i++;		
+	   memcpy(file_write+write_pos,line,read);
+ 	   write_pos=write_pos+read;
+	   free(line);
+	}
+	fclose(fp);
+	FILE *fp=fopen(file,"w");
+	fwrite(file_write,write_pos,1,fp);
+	fclose(fp);
+	result=1;
+	
+	return result;	
+}
+
+int set_alarm_on(char *file,char *alarm_id,int like)
+{
+	char buf[256]={0};
+	int result=0;
+	char * line = NULL;
+	size_t len = 0;
+	int i;
+	int write_pos=0,read=0,found=0;
+	FILE *fp=fopen(file,"r");
+	fseek(fp,0L,SEEK_END);
+	int flen=ftell(fp);
+	char *file_write;
+	file_write=(char *)malloc(flen);	
+	while ((read = getline(&line, &len, fp)) != -1) 
+	{	
+		if(strncmp(line,alarm_id,strlen(alarm_id))==0)
+		{		 
+		  found=1;
+		  i=0;
+	   	}
+		if(found==1)
+			i++;
+		if(i==3)
+		{
+			//set use or unuse
+			char *str=strchr(line,';');
+			if(like)
+				str[1]='a';
+			else
+				str[1]='b';
+			found=0;
+			i=0;
+		}
+	   memcpy(file_write+write_pos,line,read);
+ 	   write_pos=write_pos+read;
+	   free(line);
+	}
+	fclose(fp);
+	FILE *fp=fopen(file,"w");
+	fwrite(file_write,write_pos,1,fp);
+	fclose(fp);
+	result=1;
+	
+	return result;	
+}
+
 int write_file_line(char *file,char *alarm_id,char *str)
 {
 	char buf[256]={0};
 	int result=0;
 	char * line = NULL;
 	size_t len = 0;
+	char last[3]="/r/n";
 	int write_pos=0,read=0,found=0;
 	FILE *fp=fopen(file,"r");
 	fseek(fp,0L,SEEK_END);
@@ -136,7 +259,8 @@ int write_file_line(char *file,char *alarm_id,char *str)
 		  memcpy(file_write+write_pos,alarm_id,strlen(alarm_id));
 		  (char *)(file_write+write_pos+strlen(alarm_id))=';';
 		  memcpy(file_write+write_pos+stlen(alarm_id)+1,str,strlen(str));
-		  write_pos=write_pos+strlen(str)+strlen(alarm_id)+1;
+		  memcpy(file_write+write_pos+stlen(alarm_id)+1+2+,str,2);
+		  write_pos=write_pos+strlen(str)+strlen(alarm_id)+1+2;
 		  found=1;
 	   }
 	   else
@@ -160,6 +284,221 @@ int write_file_line(char *file,char *alarm_id,char *str)
 	
 	return result;	
 }
+int write_alert(char *file,int found,char *alarm_id,char *alarm_name,char *alarm_day,char *alarm_time,char *alarm_up,char *alarm_freq)
+{
+	char buf[256]={0};
+	int result=0;
+	char * line = NULL;
+	size_t len = 0;
+	char last[3]="/r/n";
+	int write_pos=0,read=0,found=0;
+	FILE *fp=fopen(file,"r");
+	fseek(fp,0L,SEEK_END);
+	int flen=ftell(fp);
+	char *file_write;
+	if(found)		
+		file_write=(char *)malloc(flen+strlen(str)+1);		
+	else
+		file_write=(char *)malloc(flen+5*strlen(alarm_id)+strlen(alarm_name)+strlen(alarm_day)+strlen(alarm_time)+strlen(alarm_up)+strlen(alarm_freq)+1);		
+	while ((read = getline(&line, &len, fp)) != -1) 
+	{	
+		if(found && strncmp(line,alarm_id,strlen(alarm_id))==0)
+		{
+			char *a_id=strdup(alarm_id);
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_name,strlen(alarm_name));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_name),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_name);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_day,strlen(alarm_day));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_day),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_day);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_time,strlen(alarm_time));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_time),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_time);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_up,strlen(alarm_up));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_up),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_up);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_freq,strlen(alarm_freq));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_freq),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_freq);
+		  free(a_id);
+	   }
+	   else
+	   {
+		   memcpy(file_write+write_pos,line,read);
+	 	   write_pos=write_pos+read;
+	   }
+	   free(line);
+	}
+	fclose(fp);
+	
+	FILE *fp=fopen(file,"w");
+	fwrite(file_write,write_pos,1,fp);	
+	if(found==0)
+	{	
+		char line[64]={0};
+		char *a_id=strdup(alarm_id);
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_name);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+'1';
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_day);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+'1';
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_time);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+'1';
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_up);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+'1';
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_freq);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		free(a_id);
+	}
+	fclose(fp);
+	result=1;
+	
+	return result;	
+}
+int write_alarm(char *file,int found,char *alarm_id,char *alarm_time,char *alarm_freq,char *alarm_vol,char *alarm_blance,char *alarm_change,char *alarm_change_freq)
+{
+	char buf[256]={0};
+	int result=0;
+	char * line = NULL;
+	size_t len = 0;
+	char last[3]="/r/n";
+	int write_pos=0,read=0,found=0;
+	FILE *fp=fopen(file,"r");
+	fseek(fp,0L,SEEK_END);
+	int flen=ftell(fp);
+	char *file_write;
+	if(found)		
+		file_write=(char *)malloc(flen+strlen(str)+1);		
+	else
+		file_write=(char *)malloc(flen+5*strlen(alarm_id)+strlen(alarm_name)+strlen(alarm_day)+strlen(alarm_time)+strlen(alarm_up)+strlen(alarm_freq)+1);		
+	while ((read = getline(&line, &len, fp)) != -1) 
+	{	
+		if(found && strncmp(line,alarm_id,strlen(alarm_id))==0)
+		{
+			char *a_id=strdup(alarm_id);
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_name,strlen(alarm_name));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_name),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_name);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_day,strlen(alarm_day));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_day),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_day);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_time,strlen(alarm_time));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_time),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_time);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_up,strlen(alarm_up));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_up),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_up);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_freq,strlen(alarm_freq));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_freq),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_freq);
+		  free(a_id);
+	   }
+	   else
+	   {
+		   memcpy(file_write+write_pos,line,read);
+	 	   write_pos=write_pos+read;
+	   }
+	   free(line);
+	}
+	fclose(fp);
+	
+	FILE *fp=fopen(file,"w");
+	fwrite(file_write,write_pos,1,fp);	
+	if(found==0)
+	{	
+		char line[64]={0};
+		char *a_id=strdup(alarm_id);
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_name);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+'1';
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_day);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+'1';
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_time);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+'1';
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_up);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+'1';
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_freq);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		free(a_id);
+	}
+	fclose(fp);
+	result=1;
+	
+	return result;	
+}
+
 int get_file_lines(char *file)
 {
 	FILE *fp;
@@ -230,7 +569,7 @@ int main(int argc, char *argv[])
 					int file_line=get_file_lines(file_name);
 					if(file_line==0 || ((file_line%FILE_MUSIC_LINES_RECORD)!=0))
 					{
-						strcat(text_out,"music-id ");
+						strcat(text_out,";music-id ");
 						strcat(text_out,"unknown");
 						strcat(text_out,";music-name ");
 						strcat(text_out,"unknown");
@@ -414,7 +753,7 @@ int main(int argc, char *argv[])
 					printf(LOG_PREFX"text_out is %s\n",text_out);
 
 				}				
-				else if(data.text[2]='0' && data.text[3]='7')
+				else if((data.text[2]='0' && data.text[3]='7')||(data.text[2]='1' && data.text[3]='2')||(data.text[2]='1' && data.text[3]='4')||(data.text[2]='2' && data.text[3]='1' &&data.text[5]='0' && data.text[6]='0'))
 				{//07
 					char buf[25]={0};
 					char light_id[10]={0};
@@ -423,13 +762,43 @@ int main(int argc, char *argv[])
 					file_name[len]=data.text[7];
 					file_name[len+1]=data.text[8];
 					strcat(file_name,".txt");
-					printf(LOG_PREFX"cmd 07 to open %s\n",file_name);
+					printf(LOG_PREFX"cmd 07 or 12 or 14 or 21 to open %s\n",file_name);
 					operation=0;
-					if(data.text[5]!='w')
-						strcpy(text_out,"d;07;b;");
+					if(data.text[2]='0' && data.text[3]='7')
+					{
+						if(data.text[5]!='w')
+							strcpy(text_out,"d;07;b;");
+						else
+							strcpy(text_out,"d;07;w;");
+					}
 					else
-						strcpy(text_out,"d;07;w;");
-					if(data.text[5]=='b')
+					{
+						if(data.text[2]='0' && data.text[3]='7')
+						{
+							if(data.text[5]!='w')
+								strcpy(text_out,"d;12;b;");
+							else
+								strcpy(text_out,"d;12;w;");
+						}
+						else
+						{
+							if(data.text[2]='1' && data.text[3]='4')
+							{	
+								if(data.text[5]!='w')
+									strcpy(text_out,"d;14;b;");
+								else
+									strcpy(text_out,"d;14;w;");
+							}
+							else
+							{
+								
+								strcpy(text_out,"d;21;00;");											
+								file_name[len]=data.text[5];
+								file_name[len+1]=data.text[6];
+							}
+						}
+					}
+					if(data.text[5]=='b' || data.text[5]!='w')
 						strcpy(light_id,strrchr(data.text,';')+1);
 					else
 					{
@@ -467,7 +836,7 @@ int main(int argc, char *argv[])
 							else
 								strcat(text_out,"unknown");
 							memset(buf,'\0',25);
-							if(read_file_line(file_name,i+2,1,buf))
+							if(read_file_line(file_name,i+2,2,buf))
 								strcat(text_out,buf);
 							else
 								strcat(text_out,"unknown");
@@ -495,71 +864,625 @@ int main(int argc, char *argv[])
 							strcat(text_out,";unknown");
 							strcat(text_out,";unknown");
 						}
-						if(data.text[5]=='w')
+						if(data.text[5]=='w' &&((data.text[2]='0' && data.text[3]='7')||(data.text[2]='1' && data.text[3]='4')))
 							strcat(text_out,data.text+j);
+						}
+						printf(LOG_PREFX"light list %s\n",text_out);
+					
+				}
+				else if(data.text[2]='1' && data.text[3]='1')
+				{//11
+					char buf[25]={0};
+					strcat(file_name,data.text+7);
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 11 to open %s\n",file_name);
+					operation=0;
+					memcpy(text_out,data.text,6);
+					text_out[0]='d';
+					int file_line=get_file_lines(file_name);
+					if(file_line==0 || ((file_line%FILE_LIGHT_LINES_RECORD)!=0))
+					{
+						strcat(text_out,";mode-id ");
+						strcat(text_out,"unknown");
+						strcat(text_out,";mode-name ");
+						strcat(text_out,"unknown");
+						strcat(text_out,";mode-use ");
+						strcat(text_out,"unknown");
+					}
+					else
+					{
+						int i;
+						for(i=0;i<file_line;i=i+FILE_LIGHT_LINES_RECORD)
+						{
+							strcat(text_out,";mode-id ");
+							if(read_file_line(file_name,i+FILE_LIGHT_NAME_LINE,0,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							memset(buf,'\0',25);
+							strcat(text_out,";mode-name ");
+							if(read_file_line(file_name,i+FILE_LIGHT_NAME_LINE,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							memset(buf,'\0',25);
+							strcat(text_out,";mode-use ");
+							if(read_file_line(file_name,i+FILE_LIGHT_MODE_USE,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
 						}
 						printf(LOG_PREFX"light list %s\n",text_out);
 					}
 					memset(file_name,'\0',256);
 				}
-				else if(data.text[2]='1' && data.text[3]='1')
-				{//11
-
-				}
-				else if(data.text[2]='1' && data.text[3]='2')
-				{//12
-
-				}
+				//else if(data.text[2]='1' && data.text[3]='2')
+				//{//12
+				//
+				//}
 				else if(data.text[2]='1' && data.text[3]='3')
 				{//13
-
+					char mode_id[10]={0};
+					char str[256]={0};
+					len=strlen(FILE_PATH_NAME);
+					file_name[len]=data.text[7];
+					file_name[len+1]=data.text[8];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 13 to open %s\n",file_name);
+					int i=10;
+					while(data.text[i]!='\0' && data.text[i]!=';')
+						i++;
+					memcpy(mode_id,data.text+10,i-10);
+					printf(LOG_PREFX"mode_id %s\n",mode_id);
+					set_light_use(file_name,mode_id,1);
+					if(data.text[5]!='w')
+					{
+						strcpy(text_out,"d;13;b;mode-id ");
+						strcat(text_out,mode_id);
+					}
+					else
+					{
+						strcpy(text_out,"d;13;w;mode-id ");
+						strcat(text_out,mode_id);
+						strcat(text_out,";");
+						strcat(text_out,data.text+i);
+					}
+					printf(LOG_PREFX"text_out is %s\n",text_out);
 				}
-				else if(data.text[2]='1' && data.text[3]='4')
-				{//14
-
-				}
+				///else if(data.text[2]='1' && data.text[3]='4')
+				//{//14
+				//
+				//}
 				else if(data.text[2]='1' && data.text[3]='5')
-				{//15
-
+				{//15					
+					char mode_id[10]={0};
+					char str[256]={0};
+					len=strlen(FILE_PATH_NAME);
+					file_name[len]=data.text[7];
+					file_name[len+1]=data.text[8];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 15 to open %s\n",file_name);
+					int i=10;
+					while(data.text[i]!='\0' && data.text[i]!=';')
+						i++;
+					memcpy(mode_id,data.text+10,i-10);
+					printf(LOG_PREFX"mode_id %s\n",mode_id);
+					set_light_use(file_name,mode_id,1);
+					if(data.text[5]!='w')
+					{
+						if(data.text[5]=='b')
+							strcpy(text_out,"g;15;b;0");
+						else
+							strcpy(text_out,"g;15;m;0");
+					}
+					else
+					{
+						strcpy(text_out,"g;15;w;0");
+						strcat(text_out,";");
+						strcat(text_out,data.text+i);
+					}
+					printf(LOG_PREFX"text_out is %s\n",text_out);
 				}
 				else if(data.text[2]='1' && data.text[3]='6')
 				{//16
+					char mode_id[10]={0};
+					char str[256]={0};
+					len=strlen(FILE_PATH_NAME);
+					file_name[len]=data.text[7];
+					file_name[len+1]=data.text[8];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 16 to open %s\n",file_name);
+					int i=10;
+					while(data.text[i]!='\0' && data.text[i]!=';')
+						i++;
+					memcpy(mode_id,data.text+10,i-10);
+					printf(LOG_PREFX"mode_id %s\n",mode_id);
+					set_light_use(file_name,mode_id,0);
+					if(data.text[5]!='w')
+					{
+						if(data.text[5]=='b')
+							strcpy(text_out,"g;16;b;0");
+						else
+							strcpy(text_out,"g;16;m;0");
+					}
+					else
+					{
+						strcpy(text_out,"g;16;w;0");
+						strcat(text_out,";");
+						strcat(text_out,data.text+i);
+					}
+					printf(LOG_PREFX"text_out is %s\n",text_out);
 
 				}
 				else if(data.text[2]='1' && data.text[3]='7')
 				{//17
-
+					char buf[25]={0};
+					len=strlen(FILE_PATH_NAME);
+					file_name[len]=data.text[7];
+					file_name[len+1]=data.text[8];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 11 to open %s\n",file_name);
+					operation=0;
+					int file_line=get_file_lines(file_name);
+					if(strrchr(data.text,'?')!=NULL)
+					{						
+						strcpy(text_out,"g;17;b;");
+						if(file_line==0 || ((file_line%FILE_ALARM_LINES_RECORD)!=0))
+						{
+							read_file_line(file_name,file_line-FILE_ALARM_LINES_RECORD,0,buf);
+							strcat(text_out,buf);
+						}
+						else
+							strcat(text_out,"unknown");
+					}
+					else
+					{//change alarm setting
+						int i,found=0;
+						char alarm_id[10]={0};
+						char alarm_time[10]={0};
+						char alarm_freq[10]={0};
+						char alarm_vol[10]={0};
+						char alarm_blance[10]={0};
+						char alarm_change[10]={0};
+						char alarm_vol_change_freq[10]={0};
+						int i=10,j=0;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alarm_id,data.text+10,i-10);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alarm_time,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alarm_time+2,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alarm_freq,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alarm_vol,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alarm_blance,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alarm_change,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alarm_vol_change_freq,data.text+j,i-j);
+						for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
+						{
+							if(read_file_line(file_name,i,0,buf));
+							{
+									if(strncmp(buf,alarm_id,strlen(buf))==0)
+									{
+										found=1;
+										break;
+									}
+							}
+						}					
+						if(data.text[5]=='b')
+							strcpy(text_out,"g;17;b;0");
+						else
+						{
+							strcpy(text_out,"g;17;w;0;");
+							strcat(text_out,data.text+i);
+						}
+						printf(LOG_PREFX"alarm_id %s \nalarm_time %s \nalarm_freq %s \nalarm_vol %s \nalarm_blance %s \nalarm_change %s \nalarm_vol_change_freq\n"alarm_id,alarm_time,alarm_freq,alarm_vol,alarm_blance,alarm_change,alarm_vol_change_freq);
+						write_alarm(file_name,found,alarm_id,alarm_time,alarm_freq,alarm_vol,alarm_blance,alarm_change,alarm_vol_change_freq);
+					}
 				}
 				else if(data.text[2]='1' && data.text[3]='8')
 				{//18
+					char alarm_id[10]={0};
+					char str[256]={0};
+					len=strlen(FILE_PATH_NAME);
+					file_name[len]=data.text[7];
+					file_name[len+1]=data.text[8];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 18 to open %s\n",file_name);
+					int i=10;
+					while(data.text[i]!='\0' && data.text[i]!=';')
+						i++;
+					memcpy(alarm_id,data.text+10,i-10);
+					printf(LOG_PREFX"alarm_id %s\n",alarm_id);
+					set_alarm_on(file_name,alarm_id,1);
+					if(data.text[5]=='b')
+						strcpy(text_out,"g;18;b;0");
+					else
+					{
+						strcpy(text_out,"g;18;w;0;");
+						strcat(text_out,data.text+i);
+					}
+					printf(LOG_PREFX"text_out is %s\n",text_out);
 
 				}
 				else if(data.text[2]='1' && data.text[3]='9')
 				{//19
+					char alarm_id[10]={0};
+					char str[256]={0};
+					len=strlen(FILE_PATH_NAME);
+					file_name[len]=data.text[7];
+					file_name[len+1]=data.text[8];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 19 to open %s\n",file_name);
+					int i=10;
+					while(data.text[i]!='\0' && data.text[i]!=';')
+						i++;
+					memcpy(alarm_id,data.text+10,i-10);
+					printf(LOG_PREFX"alarm_id %s\n",alarm_id);
+					set_alarm_on(file_name,alarm_id,0);
+					if(data.text[5]=='b')
+						strcpy(text_out,"g;19;b;0");
+					else
+					{
+						strcpy(text_out,"g;19;w;0;");
+						strcat(text_out,data.text+i);
+					}
+					printf(LOG_PREFX"text_out is %s\n",text_out);
 
 				}
 				else if(data.text[2]='2' && data.text[3]='0')
 				{//20
-
+					char buf[25]={0};
+					char alarm_id[10]={0};
+					len=strlen(FILE_PATH_NAME);
+					file_name[len]=data.text[5];
+					file_name[len+1]=data.text[6];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 20 to open %s\n",file_name);
+					int found=0;
+					strcpy(text_out,"d;20;");
+					int i;
+					strcpy(alarm_id,strrchr(data.text,';')+1);
+					int file_line=get_file_lines(file_name);
+					if(file_line==0 || ((file_line%FILE_ALARM_LINES_RECORD)!=0))
+					{
+						strcat(text_out,";unknown");
+					}
+					else
+					{
+						for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
+						{
+							if(read_file_line(file_name,i,0,buf));
+							{
+									if(strncmp(buf,alarm_id,strlen(buf))==0)
+									{
+										found=1;
+										break;
+									}
+							}
+						}
+						if(found)
+						{
+							if(read_file_line(file_name,i+8,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,";unknown");
+						}
+						else
+						{
+							strcat(text_out,";unknown");
+						}
+					}
+					printf(LOG_PREFX"text out %s\n",text_out);
 				}
-				else if(data.text[2]='2' && data.text[3]='1')
+				else if(data.text[2]='2' && data.text[3]='1'&& data.text[5]='0' && data.text[6]='4')
 				{//21
-
+					char buf[25]={0};
+					char alarm_id[10]={0};
+					len=strlen(FILE_PATH_NAME);
+					file_name[len]=data.text[5];
+					file_name[len+1]=data.text[6];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 21 to open %s\n",file_name);
+					int found=0;
+					strcpy(text_out,"d;21;04;");
+					int i;
+					strcpy(alarm_id,strrchr(data.text,';')+1);
+					int file_line=get_file_lines(file_name);
+					if(file_line==0 || ((file_line%FILE_ALARM_LINES_RECORD)!=0))
+					{
+						strcat(text_out,";unknown");
+						strcat(text_out,";unknown");
+						strcat(text_out,";unknown");
+						strcat(text_out,";unknown");
+						strcat(text_out,";unknown");
+						strcat(text_out,";unknown");
+					}
+					else
+					{
+						for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
+						{
+							if(read_file_line(file_name,i,0,buf));
+							{
+									if(strncmp(buf,alarm_id,strlen(buf))==0)
+									{
+										found=1;
+										break;
+									}
+							}
+						}
+						if(found)
+						{
+							if(read_file_line(file_name,i+2,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							if(read_file_line(file_name,i+3,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");							
+							if(read_file_line(file_name,i+4,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							if(read_file_line(file_name,i+5,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							if(read_file_line(file_name,i+6,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");							
+							if(read_file_line(file_name,i+7,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+						}
+						else
+						{
+							strcat(text_out,";unknown");
+							strcat(text_out,";unknown");
+							strcat(text_out,";unknown");
+							strcat(text_out,";unknown");
+							strcat(text_out,";unknown");
+							strcat(text_out,";unknown");
+						}
+					}
+					printf(LOG_PREFX"text out %s\n",text_out);
 				}
 				else if(data.text[2]='2' && data.text[3]='3')
 				{//23
-
+					char date_id[10]={0};
+					char time_id[5]={0};
+					len=strlen(FILE_PATH_NAME);
+					file_name[len]=data.text[5];
+					file_name[len+1]=data.text[6];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 23 to open %s\n",file_name);
+					if(strlen(data.text)!=23)
+					{
+						strcpu(text_out,"g;23;1");
+					}
+					else
+					{//a;23;05;2015;0807;12;21
+						memcpy(date_id,data.text+8,4);
+						memcpy(date_id+4,data.text+13,4);						
+						memcpy(time_id,data.text+18,2);
+						memcpy(time_id+2,data.text+21,2);
+						strcpu(text_out,"g;23;0");
+						set_year_time(file_name,date_id,time_id);
+					}
+					printf(LOG_PREFX"text_out is %s\n",text_out);
 				}
 				else if(data.text[2]='2' && data.text[3]='4')
 				{//24
+					char buf[25]={0};
+					len=strlen(FILE_PATH_NAME);
+					file_name[len]=data.text[7];
+					file_name[len+1]=data.text[8];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 24 to open %s\n",file_name);
+					operation=0;
+					int file_line=get_file_lines(file_name);
+					if(strrchr(data.text,'?')!=NULL)
+					{						
+						strcpy(text_out,"g;24;b;");
+						if(file_line==0 || ((file_line%FILE_ALERT_LINES_RECORD)!=0))
+						{
+							read_file_line(file_name,file_line-FILE_ALARM_LINES_RECORD,0,buf);
+							strcat(text_out,buf);
+						}
+						else
+							strcat(text_out,"unknown");
+					}
+					else
+					{//change alarm setting
+						int i,found=0;
+						char alert_id[10]={0};
+						char alert_name[10]={0};
+						char alert_day[10]={0};
+						char alert_time[10]={0};
+						char alert_up[10]={0};
+						char alert_freq[10]={0};
+						int i=10,j=0;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alert_id,data.text+10,i-10);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alert_name,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alert_day,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alert_day+4,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alert_time,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alert_time+2,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alert_up,data.text+j,i-j);
+						j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alert_freq,data.text+j,i-j);
+						for(i=0;i<file_line;i=i+FILE_ALERT_LINES_RECORD)
+						{
+							if(read_file_line(file_name,i,0,buf));
+							{
+									if(strncmp(buf,alert_id,strlen(buf))==0)
+									{
+										found=1;
+										break;
+									}
+							}
+						}					
+						if(data.text[5]=='b')
+							strcpy(text_out,"g;24;b;0");
+						else
+						{
+							strcpy(text_out,"g;24;w;0;");
+							strcat(text_out,data.text+i);
+						}
+						printf(LOG_PREFX"alert_id %s \nalert_name %s \nalert_day %s \nalert_time %s \nalert_up %s \nalert_freq\n",alert_id,alert_name,alert_day,alert_time,alert_up,alert_freq);
+						write_alert(file_name,found,alert_id,alert_name,alert_day,alert_time,alert_up,alert_freq);
+					}
 
 				}
 				else if(data.text[2]='2' && data.text[3]='5')
 				{//25
+					char buf[25]={0};
+					char alarm_id[10]={0};
+					len=strlen(FILE_PATH_NAME);
+					file_name[len]=data.text[5];
+					file_name[len+1]=data.text[6];
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 25 to open %s\n",file_name);
+					int found=0;
+					strcpy(text_out,"d;25;");
+					int i;
+					strcpy(alarm_id,strrchr(data.text,';')+1);
+					int file_line=get_file_lines(file_name);
+					if(file_line==0 || ((file_line%FILE_ALARM_LINES_RECORD)!=0))
+					{
+						strcat(text_out,";unknown");
+						strcat(text_out,";unknown");
+					}
+					else
+					{
+						for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
+						{
+							if(read_file_line(file_name,i,0,buf));
+							{
+									if(strncmp(buf,alarm_id,strlen(buf))==0)
+									{
+										found=1;
+										break;
+									}
+							}
+						}
+						if(found)
+						{
+							if(read_file_line(file_name,i,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							if(read_file_line(file_name,i+1,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown"); 		
+						}
+						else
+						{
+							strcat(text_out,";unknown");
+							strcat(text_out,";unknown");
+						}
+					}
+					printf(LOG_PREFX"text out %s\n",text_out);
 
 				}
 				else if(data.text[2]='2' && data.text[3]='8')
 				{//28
+					char buf[25]={0};
+					strcat(file_name,data.text+7);
+					strcat(file_name,".txt");
+					printf(LOG_PREFX"cmd 28 to open %s\n",file_name);
+					operation=0;
+					memcpy(text_out,data.text,6);
+					text_out[0]='d';
+					int file_line=get_file_lines(file_name);
+					if(file_line==0 || ((file_line%FILE_ALARM_LINES_RECORD)!=0))
+					{
+						strcat(text_out,";music-id ");
+						strcat(text_out,"unknown");
+						strcat(text_out,";music-name ");
+						strcat(text_out,"unknown");
+						strcat(text_out,";singer ");
+						strcat(text_out,"unknown");
+						strcat(text_out,";music-like/unlike ");
+						strcat(text_out,"unknown");
+					}
+					else
+					{
+						int i;
+						for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
+						{
+							strcat(text_out,";ring-id ");
+							if(read_file_line(file_name,i+0,0,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							memset(buf,'\0',25);
+							strcat(text_out,";");
+							if(read_file_line(file_name,i+0,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							memset(buf,'\0',25);
+							strcat(text_out,";");
+							if(read_file_line(file_name,i+1,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							memset(buf,'\0',25);
+							strcat(text_out,";");
+							if(read_file_line(file_name,i+3,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+						}
+						printf(LOG_PREFX"audio list %s\n",text_out);
+					}
+					memset(file_name,'\0',256);
 
 				}
 				send_msg(msgid,TYPE_FILE_TO_MAIN,FILE_TO_MAIN,text_out);
@@ -576,218 +1499,7 @@ int main(int argc, char *argv[])
 			}
 			else
 				printf(LOG_PREFX"msgid %d\n",msgid);
-		}
-	#if 0
-		static int audio_system_state=STATE_NULL;
-		char err_msg[256]={0};
-		printf(LOG_PREFX"waiting MainCtlSystem cmd...\n");
-		if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_AUDIO , 0)>=0)
-		{
-		printf(LOG_PREFX"msgtype %d ,data id %d,text %s\n",data.msg_type,data.id,data.text);
-		if(data.id==MAIN_TO_AUDIO)
-		{
-			switch (data.text[XXX_OFS])
-			{
-				case PROC_RECORD://start rec
-				{
-					switch (data.text[YYY_OFS])
-					{
-						case CMD_START_RECORD:
-						{
-							strcpy(err_msg,ACK_XF_RECORD_RESULT);
-							if((!(audio_system_state&STATE_START_RECORD)))
-							{
-								audio_system_state|=STATE_START_RECORD;
-								audio_system_state&=~STATE_STOP_RECORD;
-								if((fpid=fork())==0)
-								{
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_RECORD_START);
-									rec(msgid,record_file);
-									exit(0);
-								}
-							}
-							else
-							{
-								strcat(err_msg,"already in recording ...");
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-							}
-						}
-						break;
-						case CMD_STOP_RECORD:
-						{
-							strcpy(err_msg,ACK_XF_RECORD_RESULT);
-							if(!(audio_system_state&STATE_STOP_RECORD)&&(audio_system_state&STATE_START_RECORD))
-							{
-								send_msg(msgid,TYPE_LOCAL_STOP_RECORD,0,NULL);
-								ms_sleep(1);
-								//if((fpid=fork())==0)
-								{
-									get_from_server(record_file,&rec_result);
-									if(rec_result!=NULL)
-									{
-										char *tmp=strrchr(rec_result,'=');
-										if(tmp!=NULL)
-										{
-											strcpy(res,tmp+1);
-											printf(LOG_PREFX"res %s\n",res);
-										}
-										else
-											memset(res,'\0',256);
-										free(rec_result);
-										rec_result=NULL;
-									}
-									char cmd[256];
-									strcpy(cmd,"rm ");
-									strcat(cmd,record_file);
-									system(cmd);
-									audio_system_state|=STATE_STOP_RECORD;
-									audio_system_state&=~STATE_START_RECORD;
-									//exit(0);
-								}
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_RECORD_STOP);
-							}
-							else
-							{
-								strcat(err_msg,"already in stoped ...");
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-							}
-						}
-						break;
-						case CMD_CHECK_RECORD:
-						{
-							char result[256]={0};
-							strcpy(result,ACK_XF_RECORD_RESULT);
-							printf(LOG_PREFX"res is %s\n",res);
-							if(strlen(res)!=0)
-								strcat(result,res);
-							else
-								strcat(result,"0");
-							memset(res,'\0',256);
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,result);
-						}
-						break;
-						default:
-							break;
-					}
-				}
-				break;
-				case PROC_PLAYBACK:
-				{
-					int len=strlen(data.text)-2;
-					strcpy(err_msg,ACK_PLAYBACK_LOCAL_FAILED);
-					if(!((audio_system_state&STATE_XF_PLAYBACK_BEGIN)||(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)))
-					{
-						if(len!=0)
-						{						
-							char *play_file=(char *)malloc(len+1);
-							memset(play_file,'\0',len+1);
-							memcpy(play_file,data.text+2,len);
-							audio_system_state|=STATE_PLAYBACK_LOCAL_BEGIN;
-							audio_system_state&=~STATE_PLAYBACK_LOCAL_END;							
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_START);
-							//if((fpid=fork())==0)
-							{
-								if(playback(play_file)==1)
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_STOP);
-								else
-								{
-									strcat(err_msg,"play back local file failed");
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-								}
-								free(play_file);
-							}						
-							audio_system_state&=~STATE_PLAYBACK_LOCAL_BEGIN;
-							audio_system_state|=STATE_PLAYBACK_LOCAL_END;							
-						}
-						else
-						{
-							if(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_START);
-							else
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_LOCAL_STOP);
-						}
-						
-					}
-					else
-					{
-						strcat(err_msg,"already in xf playcking or local playbacking...");
-						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-					}	
-					
-				}
-				break;
-				case XF_PLAYBACK:
-				{
-					int len=strlen(data.text)-2;
-					strcpy(err_msg,ACK_PLAYBACK_XF_FAILED);
-					if(!((audio_system_state&STATE_XF_PLAYBACK_BEGIN)||(audio_system_state&STATE_PLAYBACK_LOCAL_BEGIN)))
-					{
-						if(len!=0)
-						{
-							char *audio_string=(char *)malloc(len+1);
-							memset(audio_string,'\0',len+1);
-							memcpy(audio_string,data.text+2,len);
-							audio_system_state|=STATE_XF_PLAYBACK_BEGIN;
-							audio_system_state&=~STATE_XF_PLAYBACK_END;							
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_START);
-							//if((fpid=fork())==0)
-							{
-								if(play(audio_string,playback_file)==0)
-								{
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_STOP);
-									if(playback(playback_file)==1)
-										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_OK);
-									else
-									{
-										strcat(err_msg,"play back xf file failed");
-										send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-									}
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,ACK_PLAYBACK_XF_UNDO);
-								}
-								else
-								{
-									strcat(err_msg,"server do xf failed, ");
-									strcat(err_msg,audio_string);
-									send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-								}
-								free(audio_string);
-								audio_system_state&=~STATE_XF_PLAYBACK_BEGIN;
-								audio_system_state|=STATE_XF_PLAYBACK_END; 						
-							}
-							
-						}
-						else
-						{
-							strcat(err_msg,"audio_string is null");
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-						}
-					}
-					else
-					{
-						strcat(err_msg,"already in xf playcking or local playbacking...");
-						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,err_msg);
-					}
-					
-				}
-				break;
-				default:
-					break;
-			}
-		}
-		}
-		else
-		{
-			msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
-			if(msgid == -1)  
-			{  
-				fprintf(stderr, LOG_PREFX"msgget failed with error: %d\n", errno);  
-				//exit(-1);  
-			}
-			else
-			printf(LOG_PREFX"msgid %d\n",msgid);			
-			ms_sleep(1);
-		}
-		#endif
+		}	
 	}
 	waitpid(fpid, &status, 0);
 	
