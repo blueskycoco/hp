@@ -696,6 +696,8 @@ int main(int argc, char *argv[])
 					if(strncmp(data.text+2,"01",2)!=0)
 						send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
 				}
+				else
+					send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
 			}
 			else
 				printf(LOG_PREFX"wrong id\n");

@@ -1,4 +1,4 @@
-#include "web_interface.h"
+#include "file_interface.h"
 
 int send_msg(int msgid,unsigned char msg_type,unsigned char id,unsigned char *text)
 {
@@ -104,7 +104,7 @@ int set_music_like(char *file,char *music_id,int like)
 	   free(line);
 	}
 	fclose(fp);
-	FILE *fp=fopen(file,"w");
+	fp=fopen(file,"w");
 	fwrite(file_write,write_pos,1,fp);	
 	fclose(fp);
 	result=1;
@@ -149,7 +149,7 @@ int set_light_use(char *file,char *mode_id,int like)
 	   free(line);
 	}
 	fclose(fp);
-	FILE *fp=fopen(file,"w");
+	fp=fopen(file,"w");
 	fwrite(file_write,write_pos,1,fp);
 	fclose(fp);
 	result=1;
@@ -185,7 +185,7 @@ int set_year_time(char *file,char *year,char *time)
 	   free(line);
 	}
 	fclose(fp);
-	FILE *fp=fopen(file,"w");
+	fp=fopen(file,"w");
 	fwrite(file_write,write_pos,1,fp);
 	fclose(fp);
 	result=1;
@@ -231,7 +231,7 @@ int set_alarm_on(char *file,char *alarm_id,int like)
 	   free(line);
 	}
 	fclose(fp);
-	FILE *fp=fopen(file,"w");
+	fp=fopen(file,"w");
 	fwrite(file_write,write_pos,1,fp);
 	fclose(fp);
 	result=1;
@@ -257,7 +257,7 @@ int write_file_line(char *file,char *alarm_id,char *str)
 		if(strncmp(line,alarm_id,strlen(alarm_id))==0)
 		{
 		  memcpy(file_write+write_pos,alarm_id,strlen(alarm_id));
-		  (char *)(file_write+write_pos+strlen(alarm_id))=';';
+		  file_write[write_pos+strlen(alarm_id)]=';';
 		  memcpy(file_write+write_pos+stlen(alarm_id)+1,str,strlen(str));
 		  memcpy(file_write+write_pos+stlen(alarm_id)+1+strlen(str),last,2);
 		  write_pos=write_pos+strlen(str)+strlen(alarm_id)+1+2;
@@ -271,7 +271,7 @@ int write_file_line(char *file,char *alarm_id,char *str)
 	   free(line);
 	}
 	fclose(fp);
-	FILE *fp=fopen(file,"w");
+	fp=fopen(file,"w");
 	fwrite(file_write,write_pos,1,fp);	
 	if(found==0)
 	{
@@ -291,13 +291,13 @@ int write_alert(char *file,int found,char *alarm_id,char *alarm_name,char *alarm
 	char * line = NULL;
 	size_t len = 0;
 	char last[3]="/r/n";
-	int write_pos=0,read=0,found=0;
+	int write_pos=0,read=0;
 	FILE *fp=fopen(file,"r");
 	fseek(fp,0L,SEEK_END);
 	int flen=ftell(fp);
 	char *file_write;
 	if(found)		
-		file_write=(char *)malloc(flen+strlen(str)+1);		
+		file_write=(char *)malloc(flen+strlen(alarm_name)+strlen(alarm_day)+strlen(alarm_time)+strlen(alarm_up)+strlen(alarm_freq)+1);		
 	else
 		file_write=(char *)malloc(flen+5*strlen(alarm_id)+strlen(alarm_name)+strlen(alarm_day)+strlen(alarm_time)+strlen(alarm_up)+strlen(alarm_freq)+1);		
 	while ((read = getline(&line, &len, fp)) != -1) 
@@ -306,31 +306,31 @@ int write_alert(char *file,int found,char *alarm_id,char *alarm_name,char *alarm
 		{
 			char *a_id=strdup(alarm_id);
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  file_write[write_pos+strlen(a_id)]=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_name,strlen(alarm_name));
 		  memcpy(file_write+write_pos+stlen(a_id)+1+stlen(alarm_name),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_name);
 		  a_id=a_id+'1';
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  file_write[write_pos+strlen(a_id)]=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_day,strlen(alarm_day));
 		  memcpy(file_write+write_pos+stlen(a_id)+1+stlen(alarm_day),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_day);
 		  a_id=a_id+'1';
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  file_write[write_pos+strlen(a_id)]=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_time,strlen(alarm_time));
 		  memcpy(file_write+write_pos+stlen(a_id)+1+stlen(alarm_time),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_time);
 		  a_id=a_id+'1';
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  file_write[write_pos+strlen(a_id)]=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_up,strlen(alarm_up));
 		  memcpy(file_write+write_pos+stlen(a_id)+1+stlen(alarm_up),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_up);
 		  a_id=a_id+'1';
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  file_write[write_pos+strlen(a_id)]=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_freq,strlen(alarm_freq));
 		  memcpy(file_write+write_pos+stlen(a_id)+1+stlen(alarm_freq),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_freq);
@@ -345,7 +345,7 @@ int write_alert(char *file,int found,char *alarm_id,char *alarm_name,char *alarm
 	}
 	fclose(fp);
 	
-	FILE *fp=fopen(file,"w");
+	fp=fopen(file,"w");
 	fwrite(file_write,write_pos,1,fp);	
 	if(found==0)
 	{	
@@ -398,49 +398,55 @@ int write_alarm(char *file,int found,char *alarm_id,char *alarm_time,char *alarm
 	char * line = NULL;
 	size_t len = 0;
 	char last[3]="/r/n";
-	int write_pos=0,read=0,found=0;
+	int write_pos=0,read=0;
 	FILE *fp=fopen(file,"r");
 	fseek(fp,0L,SEEK_END);
 	int flen=ftell(fp);
 	char *file_write;
 	if(found)		
-		file_write=(char *)malloc(flen+strlen(str)+1);		
+		file_write=(char *)malloc(flen+strlen(alarm_id)+strlen(alarm_time)+strlen(alarm_freq)+strlen(alarm_vol)+strlen(alarm_blance)+strlen(alarm_change)+strlen(alarm_change_freq)+1);		
 	else
-		file_write=(char *)malloc(flen+5*strlen(alarm_id)+strlen(alarm_name)+strlen(alarm_day)+strlen(alarm_time)+strlen(alarm_up)+strlen(alarm_freq)+1);		
+		file_write=(char *)malloc(flen+5*strlen(alarm_id)+strlen(alarm_time)+strlen(alarm_freq)+strlen(alarm_vol)+strlen(alarm_blance)+strlen(alarm_change)+strlen(alarm_change_freq)+1);		
 	while ((read = getline(&line, &len, fp)) != -1) 
 	{	
 		if(found && strncmp(line,alarm_id,strlen(alarm_id))==0)
 		{
 			char *a_id=strdup(alarm_id);
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  (char *)(file_write+write_pos+strlen(a_id))=';';
-		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_name,strlen(alarm_name));
-		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_name),last,2);
-		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_name);
-		  a_id=a_id+'1';
-		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  (char *)(file_write+write_pos+strlen(a_id))=';';
-		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_day,strlen(alarm_day));
-		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_day),last,2);
-		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_day);
-		  a_id=a_id+'1';
-		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  file_write[write_pos+strlen(a_id)]=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_time,strlen(alarm_time));
 		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_time),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_time);
 		  a_id=a_id+'1';
 		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  (char *)(file_write+write_pos+strlen(a_id))=';';
-		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_up,strlen(alarm_up));
-		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_up),last,2);
-		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_up);
-		  a_id=a_id+'1';
-		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  (char *)(file_write+write_pos+strlen(a_id))=';';
+		  file_write[write_pos+strlen(a_id)]=';';
 		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_freq,strlen(alarm_freq));
 		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_freq),last,2);
 		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_freq);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  file_write[write_pos+strlen(a_id)]=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_vol,strlen(alarm_vol));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_vol),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_vol);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  file_write[write_pos+strlen(a_id)]=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_blance,strlen(alarm_blance));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_blance),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_blance);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  file_write[write_pos+strlen(a_id)]=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_change,strlen(alarm_change));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_change),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_change);
+		  a_id=a_id+'1';
+		  memcpy(file_write+write_pos,a_id,strlen(a_id));
+		  file_write[write_pos+strlen(a_id)]=';';
+		  memcpy(file_write+write_pos+stlen(a_id)+1,alarm_change_freq,strlen(alarm_change_freq));
+		  memcpy(file_write+write_pos+stlen(a_id)+1+2+stlen(alarm_change_freq),last,2);
+		  write_pos=write_pos+strlen(a_id)+1+2+stlen(alarm_change_freq);
 		  free(a_id);
 	   }
 	   else
@@ -452,26 +458,12 @@ int write_alarm(char *file,int found,char *alarm_id,char *alarm_time,char *alarm
 	}
 	fclose(fp);
 	
-	FILE *fp=fopen(file,"w");
+	fp=fopen(file,"w");
 	fwrite(file_write,write_pos,1,fp);	
 	if(found==0)
 	{	
 		char line[64]={0};
 		char *a_id=strdup(alarm_id);
-		strcpy(line,a_id);
-		strcat(line,";");
-		strcat(line,alarm_name);
-		strcat(line,"/r/n");
-		fwrite(line,strlen(line),1,fp);
-		memset(line,'0',64);
-		a_id=a_id+'1';
-		strcpy(line,a_id);
-		strcat(line,";");
-		strcat(line,alarm_day);
-		strcat(line,"/r/n");
-		fwrite(line,strlen(line),1,fp);
-		memset(line,'0',64);
-		a_id=a_id+'1';
 		strcpy(line,a_id);
 		strcat(line,";");
 		strcat(line,alarm_time);
@@ -481,14 +473,35 @@ int write_alarm(char *file,int found,char *alarm_id,char *alarm_time,char *alarm
 		a_id=a_id+'1';
 		strcpy(line,a_id);
 		strcat(line,";");
-		strcat(line,alarm_up);
+		strcat(line,alarm_freq);
 		strcat(line,"/r/n");
 		fwrite(line,strlen(line),1,fp);
 		memset(line,'0',64);
 		a_id=a_id+'1';
 		strcpy(line,a_id);
 		strcat(line,";");
-		strcat(line,alarm_freq);
+		strcat(line,alarm_vol);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+'1';
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_blance);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+'1';
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_change);
+		strcat(line,"/r/n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+'1';
+		strcpy(line,a_id);
+		strcat(line,";");
+		strcat(line,alarm_change_freq);
 		strcat(line,"/r/n");
 		fwrite(line,strlen(line),1,fp);
 		free(a_id);
@@ -557,7 +570,7 @@ int main(int argc, char *argv[])
 		{
 			if(data.id==MAIN_TO_FILE)
 			{
-				if(data_text[2]=='0' && data_text[3]=='0')
+				if(data.text[2]=='0' && data.text[3]=='0')
 				{//00
 					char buf[25]={0};
 					strcat(file_name,data.text+7);
@@ -611,7 +624,7 @@ int main(int argc, char *argv[])
 					}
 					memset(file_name,'\0',256);
 				}
-				else if(data.text[2]=='0' &&data.text[3]=='1'))
+				else if(data.text[2]=='0' && data.text[3]=='1')
 				{//01
 					char buf[25]={0};
 					char music_id[15]={0};
@@ -627,13 +640,13 @@ int main(int argc, char *argv[])
 						printf(LOG_PREFX"in normal read\n");
 						strcpy(text_out,data.text+2);						
 						strcat(text_out,";");
-						strcpy(msuic_id,strrchr(data.text,';')+1);
+						strcpy(music_id,strrchr(data.text,';')+1);
 					}
 					else
 					{	
 						printf(LOG_PREFX"in web read\n");
 						strcpy(text_out,"01;w;");
-						int i=10
+						int i=10;
 						while(data.text[i]!=';' && data.text[i]!='\0')
 							music_id[i-10]=data.text[i];
 						strcat(text_out,music_id);
@@ -671,7 +684,7 @@ int main(int argc, char *argv[])
 						}
 					}
 				}
-				else if(data.text[2]='0' && data.text[3]='3')
+				else if(data.text[2]=='0' && data.text[3]=='3')
 				{//03
 					char alarm_id[10]={0};
 					char str[256]={0};
@@ -704,7 +717,7 @@ int main(int argc, char *argv[])
 					}
 					printf(LOG_PREFX"text_out is %s\n",text_out);
 				}				
-				else if(data.text[2]='0' && data.text[3]='4')
+				else if(data.text[2]=='0' && data.text[3]=='4')
 				{//04
 					char music_id[10]={0};
 					char str[256]={0};
@@ -728,7 +741,7 @@ int main(int argc, char *argv[])
 					}
 					printf(LOG_PREFX"text_out is %s\n",text_out);
 				}
-				else if(data.text[2]='0' && data.text[3]='5')
+				else if(data.text[2]=='0' && data.text[3]=='5')
 				{//05
 					char music_id[10]={0};
 					char str[256]={0};
@@ -753,7 +766,7 @@ int main(int argc, char *argv[])
 					printf(LOG_PREFX"text_out is %s\n",text_out);
 
 				}				
-				else if((data.text[2]='0' && data.text[3]='7')||(data.text[2]='1' && data.text[3]='2')||(data.text[2]='1' && data.text[3]='4')||(data.text[2]='2' && data.text[3]='1' &&data.text[5]='0' && data.text[6]='0'))
+				else if((data.text[2]=='0' && data.text[3]=='7')||(data.text[2]=='1' && data.text[3]=='2')||(data.text[2]=='1' && data.text[3]=='4')||(data.text[2]=='2' && data.text[3]=='1' &&data.text[5]=='0' && data.text[6]=='0'))
 				{//07
 					char buf[25]={0};
 					char light_id[10]={0};
@@ -764,7 +777,7 @@ int main(int argc, char *argv[])
 					strcat(file_name,".txt");
 					printf(LOG_PREFX"cmd 07 or 12 or 14 or 21 to open %s\n",file_name);
 					operation=0;
-					if(data.text[2]='0' && data.text[3]='7')
+					if(data.text[2]=='0' && data.text[3]=='7')
 					{
 						if(data.text[5]!='w')
 							strcpy(text_out,"d;07;b;");
@@ -773,7 +786,7 @@ int main(int argc, char *argv[])
 					}
 					else
 					{
-						if(data.text[2]='0' && data.text[3]='7')
+						if(data.text[2]=='0' && data.text[3]=='7')
 						{
 							if(data.text[5]!='w')
 								strcpy(text_out,"d;12;b;");
@@ -782,7 +795,7 @@ int main(int argc, char *argv[])
 						}
 						else
 						{
-							if(data.text[2]='1' && data.text[3]='4')
+							if(data.text[2]=='1' && data.text[3]=='4')
 							{	
 								if(data.text[5]!='w')
 									strcpy(text_out,"d;14;b;");
@@ -864,13 +877,13 @@ int main(int argc, char *argv[])
 							strcat(text_out,";unknown");
 							strcat(text_out,";unknown");
 						}
-						if(data.text[5]=='w' &&((data.text[2]='0' && data.text[3]='7')||(data.text[2]='1' && data.text[3]='4')))
+						if(data.text[5]=='w' &&((data.text[2]=='0' && data.text[3]=='7')||(data.text[2]=='1' && data.text[3]=='4')))
 							strcat(text_out,data.text+j);
 						}
 						printf(LOG_PREFX"light list %s\n",text_out);
 					
 				}
-				else if(data.text[2]='1' && data.text[3]='1')
+				else if(data.text[2]=='1' && data.text[3]=='1')
 				{//11
 					char buf[25]={0};
 					strcat(file_name,data.text+7);
@@ -920,7 +933,7 @@ int main(int argc, char *argv[])
 				//{//12
 				//
 				//}
-				else if(data.text[2]='1' && data.text[3]='3')
+				else if(data.text[2]=='1' && data.text[3]=='3')
 				{//13
 					char mode_id[10]={0};
 					char str[256]={0};
@@ -953,7 +966,7 @@ int main(int argc, char *argv[])
 				//{//14
 				//
 				//}
-				else if(data.text[2]='1' && data.text[3]='5')
+				else if(data.text[2]=='1' && data.text[3]=='5')
 				{//15					
 					char mode_id[10]={0};
 					char str[256]={0};
@@ -983,7 +996,7 @@ int main(int argc, char *argv[])
 					}
 					printf(LOG_PREFX"text_out is %s\n",text_out);
 				}
-				else if(data.text[2]='1' && data.text[3]='6')
+				else if(data.text[2]=='1' && data.text[3]=='6')
 				{//16
 					char mode_id[10]={0};
 					char str[256]={0};
@@ -1014,7 +1027,7 @@ int main(int argc, char *argv[])
 					printf(LOG_PREFX"text_out is %s\n",text_out);
 
 				}
-				else if(data.text[2]='1' && data.text[3]='7')
+				else if(data.text[2]=='1' && data.text[3]=='7')
 				{//17
 					char buf[25]={0};
 					len=strlen(FILE_PATH_NAME);
@@ -1099,7 +1112,7 @@ int main(int argc, char *argv[])
 						write_alarm(file_name,found,alarm_id,alarm_time,alarm_freq,alarm_vol,alarm_blance,alarm_change,alarm_vol_change_freq);
 					}
 				}
-				else if(data.text[2]='1' && data.text[3]='8')
+				else if(data.text[2]=='1' && data.text[3]=='8')
 				{//18
 					char alarm_id[10]={0};
 					char str[256]={0};
@@ -1124,7 +1137,7 @@ int main(int argc, char *argv[])
 					printf(LOG_PREFX"text_out is %s\n",text_out);
 
 				}
-				else if(data.text[2]='1' && data.text[3]='9')
+				else if(data.text[2]=='1' && data.text[3]=='9')
 				{//19
 					char alarm_id[10]={0};
 					char str[256]={0};
@@ -1149,7 +1162,7 @@ int main(int argc, char *argv[])
 					printf(LOG_PREFX"text_out is %s\n",text_out);
 
 				}
-				else if(data.text[2]='2' && data.text[3]='0')
+				else if(data.text[2]=='2' && data.text[3]=='0')
 				{//20
 					char buf[25]={0};
 					char alarm_id[10]={0};
@@ -1194,7 +1207,7 @@ int main(int argc, char *argv[])
 					}
 					printf(LOG_PREFX"text out %s\n",text_out);
 				}
-				else if(data.text[2]='2' && data.text[3]='1'&& data.text[5]='0' && data.text[6]='4')
+				else if(data.text[2]=='2' && data.text[3]=='1'&& data.text[5]=='0' && data.text[6]=='4')
 				{//21
 					char buf[25]={0};
 					char alarm_id[10]={0};
@@ -1269,7 +1282,7 @@ int main(int argc, char *argv[])
 					}
 					printf(LOG_PREFX"text out %s\n",text_out);
 				}
-				else if(data.text[2]='2' && data.text[3]='3')
+				else if(data.text[2]=='2' && data.text[3]=='3')
 				{//23
 					char date_id[10]={0};
 					char time_id[5]={0};
@@ -1293,7 +1306,7 @@ int main(int argc, char *argv[])
 					}
 					printf(LOG_PREFX"text_out is %s\n",text_out);
 				}
-				else if(data.text[2]='2' && data.text[3]='4')
+				else if(data.text[2]=='2' && data.text[3]=='4')
 				{//24
 					char buf[25]={0};
 					len=strlen(FILE_PATH_NAME);
@@ -1378,7 +1391,7 @@ int main(int argc, char *argv[])
 					}
 
 				}
-				else if(data.text[2]='2' && data.text[3]='5')
+				else if(data.text[2]=='2' && data.text[3]=='5')
 				{//25
 					char buf[25]={0};
 					char alarm_id[10]={0};
@@ -1430,7 +1443,7 @@ int main(int argc, char *argv[])
 					printf(LOG_PREFX"text out %s\n",text_out);
 
 				}
-				else if(data.text[2]='2' && data.text[3]='8')
+				else if(data.text[2]=='2' && data.text[3]=='8')
 				{//28
 					char buf[25]={0};
 					strcat(file_name,data.text+7);
