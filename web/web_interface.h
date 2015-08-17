@@ -6,7 +6,7 @@
 #include <sys/msg.h>  
 #include <signal.h>
 #include <fnmatch.h>
-
+#define PERM S_IRUSR|S_IWUSR  
 #define TYPE_MAIN_TO_WEB 				0x02
 #define TYPE_WEB_TO_MAIN 				0x01
 #define MAIN_TO_WEB 					0x03

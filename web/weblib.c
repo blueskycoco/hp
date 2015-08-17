@@ -469,7 +469,7 @@ char * http_get(const char *url,int timeout)
         printf(LOG_PREFX"http_parse_url failed!\n");  
         return NULL;  
     }  
-    printf(LOG_PREFX"host_addr : %s\tfile:%s\t,%d\n",host_addr,file,port);  
+    //printf(LOG_PREFX"host_addr : %s\tfile:%s\t,%d\n",host_addr,file,port);  
   
     socket_fd =  http_tcpclient_create(host_addr,port,timeout);  
     if(socket_fd < 0){  
@@ -483,7 +483,7 @@ char * http_get(const char *url,int timeout)
         printf(LOG_PREFX"http_tcpclient_send failed..\n");  
         return NULL;  
     }  
-  	printf(LOG_PREFX"GET Sent:\n%s\n",lpbuf);  
+  	//printf(LOG_PREFX"GET Sent:\n%s\n",lpbuf);  
   
     if(http_tcpclient_recv(socket_fd,lpbuf,timeout) <= 0){  
         printf(LOG_PREFX"http_tcpclient_recv failed\n");  
@@ -494,6 +494,23 @@ char * http_get(const char *url,int timeout)
     return http_parse_result(lpbuf);  
 }  
 #endif
+char doit_ack(char *text,const char *item_str)
+{
+	char result=0;cJSON *json,*item_json;
+		
+		json=cJSON_Parse(text);
+		if (!json) {printf(LOG_PREFX"Error before: [%s]\n",cJSON_GetErrorPtr());}
+		else
+		{
+			item_json=cJSON_GetObjectItem(json,item_str);
+			if((item_json->type & 255) ==cJSON_True)
+			{
+				result=1;
+			}
+			cJSON_Delete(json);
+		}
+		return result;
+}
 char *doit(char *text,const char *item_str)
 {
 	char *out=NULL;cJSON *json,*item_json;
@@ -503,17 +520,22 @@ char *doit(char *text,const char *item_str)
 	else
 	{
 		//out=cJSON_Print(json);
-		item_json = cJSON_GetObjectItem(json, item_str);
+		item_json = cJSON_GetObjectItem(json, "data");
 		if (item_json)
 		{
-		    int nLen = strlen(item_json->valuestring);
-			out=(char *)malloc(nLen+1);
-			memset(out,'\0',nLen+1);
-			memcpy(out,item_json->valuestring,nLen);
+			cJSON *data;
+			data=cJSON_GetObjectItem(item_json,item_str);
+			if(data)
+			{
+			    int nLen = strlen(data->valuestring);
+				out=(char *)malloc(nLen+1);
+				memset(out,'\0',nLen+1);
+				memcpy(out,data->valuestring,nLen);
+			}			
 		    //printf(LOG_PREFX"%s ,%d %s\n",item_str,nLen,item_json->valuestring);
 		}
-		else
-			printf(LOG_PREFX"get %s failed\n",item_str);
+		//else
+		//	printf(LOG_PREFX"get %s failed\n",item_str);
 		cJSON_Delete(json);
 		//printf(LOG_PREFX"%s\n",out);
 		//free(out);

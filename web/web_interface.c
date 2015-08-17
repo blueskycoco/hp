@@ -1,7 +1,15 @@
 #include "web_interface.h"
 #include "weblib.h"
+#include <string.h>
+#include <sys/msg.h>
+#include <sys/stat.h>
+#include <fnmatch.h> 
+#include <signal.h>
+#include <sys/ipc.h>  
+#include <sys/shm.h>  
 
 char g_url[10][256]={0};
+char *g_lampcode=NULL;
 int send_msg(int msgid,unsigned char msg_type,unsigned char id,unsigned char *text)
 {
 	struct msg_st data;
@@ -25,89 +33,96 @@ int send_msg(int msgid,unsigned char msg_type,unsigned char id,unsigned char *te
 }
 int send_web(char *url,char *commandid,char *message,int timeout)
 {
-	char *request[1024]={0};
+	char request[1024]={0};
 	int result=0;
 	sprintf(request,"%s?%s&%s",url,commandid,message);
+	printf(LOG_PREFX"send web %s\n",request);
 	char *rcv=http_get(request,timeout);
 	if(rcv!=NULL)
 	{
 		printf("%s\n",rcv);
-		char *res=doit(rcv,"code");
+		char res=doit_ack(rcv,"success");
 		if(res)
 		{
-			printf(LOG_PREFX"code is %s\n",res);
-			if(atoi(res)==0)
+			printf(LOG_PREFX"code is %d\n",res);
 				result=1;
-			free(res);
 		}
 		free(rcv);
 	}
 	return result;
 }
-void get_param(char *input,char *message,char *commandid,int *websiteid,int *timeout)
+void get_param(char *input,char *message,char *commandid,int *websiteid,int *timeout,char *lampcode,char *text)
 {
 	int j=0;
 	int i=strlen(input)-1;
+	memset(lampcode,'\0',sizeof(lampcode));
+	memset(text,'\0',sizeof(text)); 				
+	strcpy(lampcode,"lampCode=");
 	memset(message,'\0',sizeof(message));
 	memset(commandid,'\0',sizeof(commandid)); 				
 	strcpy(message,"message=");
 	strcpy(commandid,"commandID=");
 	*timeout=-1;
 	*websiteid=-1;
+	//01;w;s;1;12345678;9f5d7b29-1c03-4c29-90af-ae7cd354b6ae;2;3
 	*timeout=atoi(strrchr(input,';')+1);
-	 while(input[i]!=';' && i=0)
+	 while(input[i]!=';' && i>0)
 	 	i--;
 	 i--;
 	 *websiteid=input[i]-48;
 	 i=i-2;
 	 j=i;
-	 while(input[i]!=';' && i=0)
+	 while(input[i]!=';' && i>0)
 	 	i--;
+	 memcpy(commandid+strlen("commandID="),input+i+1,j-i);	 
+	 memcpy(message+strlen("message="),input,i);
 	 i--;
-	 memcpy(commandid+strlen("commandID="),input+i,j-i+1);
-	 memcpy(message+strlen("message="),input,i-1);
+	 j=i;
+	 while(input[i]!=';' && i>0)
+	 	i--;
+	 memcpy(lampcode+strlen("lampCode="),input+i+1,j-i);	
+	 //i--;
+	 //j=i;
+	 //while(input[i]!=';' && i>0)
+	 //	i--;
+	 memcpy(text,input,i);
 }
-int get_server_cmd(char *url)
+int get_server_cmd(int msgid,char *url,char *lampcode)
 {
 	int result=0;
-	char *text_out[512]={0};
-	char *rcv=http_get(url,3);
+	char text_out[512]={0};
+	char request[1024]={0};
+	strcpy(request,url);
+	strcat(request,lampcode);
+	char *rcv=http_get(request,10);
+	//printf(LOG_PREFX"wait %s\n",request);
 	if(rcv!=NULL)
 	{
-		printf("%s\n",rcv);
-		char *res=doit(rcv,"code");
-		if(res)
-		{
-			printf(LOG_PREFX"code is %s\n",res);
-			if(atoi(res)==0)
-				result=1;
-			free(res);
-		}
-		if(result)
-		{
-			char *lampCode=doit(rcv,"commandid");
-			char *commandid=doit(rcv,"message");
-			char *commandCode=doit(rcv,"commandCode");
+		//printf("%s\n",rcv);
+			
+			char *commandid=doit(rcv,"commondId");
+			char *message=doit(rcv,"message");
 			memset(text_out,'\0',sizeof(text_out));
-			if(commandCode)
+			
+			if(message && commandid)
 			{
-				memcpy(text_out,commandCode,3);
+				result=1;
+				int i=0;
+				while(message[i]!=';' && message[i]!='\0')
+					i++;
+				memcpy(text_out,message+i+1,3);
 				strcat(text_out,"w;");			
-				strcat(text_out,commandCode+3);
-			}
-			if(lampCode)
-			{
+				strcat(text_out,message+i+1+3);
 				strcat(text_out,";");
-				strcat(text_out,lampCode);
-			}
-			if(commandid)
-			{
+				strcat(text_out,lampcode);
 				strcat(text_out,";");
 				strcat(text_out,commandid);
-			}
-			if(strlen(text_out)!=0)
 				send_msg(msgid,TYPE_WEB_TO_MAIN,WEB_TO_MAIN,text_out);
-		}
+			}
+			if(message)
+				free(message);
+			if(commandid)
+				free(commandid);		
 		free(rcv);
 	}
 	return result;
@@ -130,6 +145,8 @@ int main(int argc, char *argv[])
 	char operation=0;//0 for read ,1 for write
 	int offs=0;
 	int len;
+	char *url0;
+	key_t shmid,shmidc;  
 
 	msgid = msgget((key_t)1234, 0666 | IPC_CREAT);  
 	if(msgid == -1)  
@@ -138,15 +155,38 @@ int main(int argc, char *argv[])
 		exit(-1);  
 	}
 	else
-		printf(LOG_PREFX"msgid %d\n",msgid);		
+		printf(LOG_PREFX"msgid %d\n",msgid);	
+	if((shmid = shmget(IPC_PRIVATE, 256, PERM)) == -1 )
+	{
+        fprintf(stderr, LOG_PREFX"Create Share Memory Error:%s/n/a", strerror(errno));  
+        exit(1);  
+    }  
+	shmidc = shmget(IPC_PRIVATE, 256, PERM);
+	url0 = (char *)shmat(shmid, 0, 0);
+	g_lampcode = (char *)shmat(shmidc, 0, 0);
 	fpid=fork();
 	if(fpid==0)
 	{
-		get_server_cmd(g_url[0]);
+		char *url=(char *)shmat(shmid, 0, 0);
+		char *lampcode=(char *)shmat(shmidc, 0, 0);
+		while(1)
+		{
+			if(strlen(url)!=0 && strlen(lampcode)!=0)
+			{
+				if(!get_server_cmd(msgid,url,lampcode))
+					sleep(1);
+			}
+			else
+			{
+				//printf(LOG_PREFX"wait for main configure url...\n");
+				sleep(1);
+			}
+		}
 	}
 	else if(fpid>0)
 	{
 		char lampcode[256]={0};
+		char text[256]={0};
 		char commandid[256]={0};
 		char errorMsg[256]={0};
 		int websiteid=0;
@@ -171,26 +211,44 @@ int main(int argc, char *argv[])
 							while(data.text[m]!=';' && data.text[m]!='\0')
 								m++;
 							if(data.text[m]=='\0')
+							{
+								memset(g_lampcode,'\0',256);
+								memcpy(g_lampcode,data.text+j,m-j);
 								break;
+							}
 							else
 							{								
 								memset(g_url[i],'\0',256);
 								memcpy(g_url[i],data.text+j,m-j);
 								m++;
 							}
+							printf(LOG_PREFX"url %d %s\n",i,g_url[i]);
 						}
+						strcpy(url0,g_url[0]);//last is lampcode
+						printf(LOG_PREFX"g_lampcode %s\n",g_lampcode);
 						strcat(errorMsg,";done");
 						send_msg(msgid,TYPE_WEB_TO_MAIN,WEB_TO_MAIN,errorMsg);
 					}
 					else
 					{
-						get_param(data.text,message,commandid,&websiteid,&timeout);
-						printf(LOG_PREFX"input %s\nmessage %s\ncommandid %s\nwebsiteid %d\ntimeout %d\n",
-							data.text,message,commandid,websiteid,timeout);
-						if(send_web(g_url[websiteid],commandid,message,timeout))
-							strcat(errorMsg,";done");
+						get_param(data.text,message,commandid,&websiteid,&timeout,lampcode,text);
+						printf(LOG_PREFX"input %s\nmessage %s\ncommandid %s\nwebsiteid %d\ntimeout %d\nlampcode %s\ntext %s\n",
+							data.text,message,commandid,websiteid,timeout,lampcode,text);
+						if(strstr(g_url[websiteid],"synch")!=0)
+						{
+							if(send_web(g_url[websiteid],lampcode,text,timeout))
+								strcat(errorMsg,";done");
+							else
+								strcat(errorMsg,";failed");
+
+						}
 						else
-							strcat(errorMsg,";failed");
+						{
+							if(send_web(g_url[websiteid],commandid,message,timeout))
+								strcat(errorMsg,";done");
+							else
+								strcat(errorMsg,";failed");
+						}
 							send_msg(msgid,TYPE_WEB_TO_MAIN,WEB_TO_MAIN,errorMsg);
 					}
 				}
