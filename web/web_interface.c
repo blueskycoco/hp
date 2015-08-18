@@ -108,16 +108,24 @@ int get_server_cmd(int msgid,char *url,char *lampcode)
 			if(message && commandid)
 			{
 				result=1;
-				int i=0;
-				while(message[i]!=';' && message[i]!='\0')
-					i++;
-				memcpy(text_out,message+i+1,3);
-				strcat(text_out,"w;");			
-				strcat(text_out,message+i+1+3);
-				strcat(text_out,";");
+				if(message[strlen(message)-1]==';')
+				{
+					strcpy(text_out,strrchr(message,';')+1);
+					strcat(text_out,";w;s;");
+				}
+				else
+				{
+					int i=0;
+					while(message[i]!=';' && message[i]!='\0')
+						i++;
+					memcpy(text_out,message+i+1,3);
+					strcat(text_out,"w;");			
+					strcat(text_out,message+i+1+3);
+					strcat(text_out,";");
+				}
 				strcat(text_out,lampcode);
 				strcat(text_out,";");
-				strcat(text_out,commandid);
+				strcat(text_out,commandid);			
 				send_msg(msgid,TYPE_WEB_TO_MAIN,WEB_TO_MAIN,text_out);
 			}
 			if(message)
