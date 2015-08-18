@@ -57,7 +57,7 @@ void get_param(char *input,char *message,char *commandid,int *websiteid,int *tim
 	int i=strlen(input)-1;
 	memset(lampcode,'\0',sizeof(lampcode));
 	memset(text,'\0',sizeof(text));
-	strcat(text,"message=");
+	strcpy(text,"message=");
 	strcpy(lampcode,"lampCode=");
 	memset(message,'\0',sizeof(message));
 	memset(commandid,'\0',sizeof(commandid)); 				
@@ -86,7 +86,7 @@ void get_param(char *input,char *message,char *commandid,int *websiteid,int *tim
 	 //j=i;
 	 //while(input[i]!=';' && i>0)
 	 //	i--;
-	 memcpy(text,input,i);
+	 memcpy(text+strlen("message="),input,i);
 }
 int get_server_cmd(int msgid,char *url,char *lampcode)
 {
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 		char message[256]={0};
 		while(1)
 		{
-			printf(LOG_PREFX"waiting MainCtlSystem cmd...\n");
+			//printf(LOG_PREFX"waiting MainCtlSystem cmd...\n");
 			if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_WEB , 0)>=0)
 			{			
 				memset(errorMsg,'\0',256);
@@ -267,8 +267,8 @@ int main(int argc, char *argv[])
 					fprintf(stderr, LOG_PREFX"msgget failed with error: %d\n", errno);  
 					sleep(1);
 				}
-				else
-					printf(LOG_PREFX"msgid %d\n",msgid);
+				//else
+					//printf(LOG_PREFX"msgid %d\n",msgid);
 			}	
 		}
 	}

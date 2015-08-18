@@ -30,7 +30,7 @@ int read_file_line(char *file,int line_addr,char prv,char *out)
 	int line_cnt=0;
 	ssize_t read;
 
-	fp = fopen(file, "r");
+	fp = fopen(file, "rb");
 	if (fp == NULL)
 	   exit(-1);
 
