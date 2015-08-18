@@ -56,7 +56,8 @@ void get_param(char *input,char *message,char *commandid,int *websiteid,int *tim
 	int j=0;
 	int i=strlen(input)-1;
 	memset(lampcode,'\0',sizeof(lampcode));
-	memset(text,'\0',sizeof(text)); 				
+	memset(text,'\0',sizeof(text));
+	strcat(text,"message=");
 	strcpy(lampcode,"lampCode=");
 	memset(message,'\0',sizeof(message));
 	memset(commandid,'\0',sizeof(commandid)); 				

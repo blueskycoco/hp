@@ -125,7 +125,8 @@ int run_asr(char *grammar_id,const char* asrfile ,  const char* param, unsigned 
 int get_from_server(char *grammar_id,char *file,unsigned char **rec_result)
 {
 	const char* login_config = "appid = 55801297,work_dir =   .  ";
-	const char* param = "rst=plain,rse=utf8,sub=asr,aue=speex-wb,auf=audio/L16;rate=16000,ent=sms16k";    //注意sub=asr,16k音频aue=speex-wb，8k音频识别aue=speex，
+//	const char* param = "rst=plain,rse=utf8,sub=asr,aue=speex-wb,auf=audio/L16;rate=800,ent=sms8";    //注意sub=asr,16k音频aue=speex-wb，8k音频识别aue=speex，
+	const char *param =	"sub=asr,aue=speex,auf=audio/L16;rate=8000,ent=sms8k";
 	int ret = 0 ;
 	int result=1;
 	ret = MSPLogin(NULL, NULL, login_config);
@@ -157,7 +158,7 @@ void rec(/*int msgid,*/char *filename)
 	long int msgtype = 0;
 	char *capt_card1=NULL,*play_card1=NULL;
 	int rate = 8000;
-	int nchan=2;
+	int nchan=1;
 	int i;
 	const char *alsadev=NULL;
 
@@ -494,6 +495,7 @@ int main(int argc, char *argv[])
 						if((fpid=fork())==0)
 						{
 							char *audio_state=(char *)shmat(shmid, 0, 0);
+							system("rm /tmp/rec.wav");
 							rec(record_file);
 							get_from_server(grammar_id,record_file,&rec_result);
 							if(rec_result!=NULL)
