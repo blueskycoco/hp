@@ -95,10 +95,10 @@ int get_server_cmd(int msgid,char *url,char *lampcode)
 	strcpy(request,url);
 	strcat(request,lampcode);
 	char *rcv=http_get(request,10);
-	//printf(LOG_PREFX"wait %s\n",request);
+	printf(LOG_PREFX"===> %s\n",request);
 	if(rcv!=NULL)
 	{
-		//printf("%s\n",rcv);
+		printf("<=== %s\n",rcv);
 			
 			char *commandid=doit(rcv,"commondId");
 			char *message=doit(rcv,"message");
