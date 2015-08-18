@@ -66,7 +66,7 @@ void get_param(char *input,char *message,char *commandid,int *websiteid,int *tim
 	*timeout=-1;
 	*websiteid=-1;
 	//01;w;s;1;12345678;9f5d7b29-1c03-4c29-90af-ae7cd354b6ae;2;3
-	*timeout=atoi(strrchr(input,';')+1);
+	*timeout=atoi(strchr(input,';')+1);
 	 while(input[i]!=';' && i>0)
 	 	i--;
 	 i--;
@@ -110,8 +110,8 @@ int get_server_cmd(int msgid,char *url,char *lampcode)
 				result=1;
 				if(message[strlen(message)-1]==';')
 				{
-					strcpy(text_out,strrchr(message,';')+1);
-					strcat(text_out,";w;s;");
+					strcpy(text_out,strchr(message,';')+1);
+					strcat(text_out,"w;s;");
 				}
 				else
 				{
