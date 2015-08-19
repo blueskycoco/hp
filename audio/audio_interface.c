@@ -224,7 +224,11 @@ static void fileplay_eof(void *user_data, MSFilter *f, unsigned int event, void 
 void set_vol(int vol)
 {
 	char cmd[256]={0};
-	sprintf(cmd,"amixer cset numid=3,iface=MIXER,name=\'Headphone Playback Volume\' %d", vol);
+	if(vol<80)
+		vol=80;
+	if(vol>127)/*amixer cset numid=5,iface=MIXER,name='Headphone Playback Volume'*/
+		vol=127;
+	sprintf(cmd,"amixer cset numid=5,iface=MIXER,name=\'Headphone Playback Volume\' %d", vol);
 	printf(LOG_PREFX"cmd is %s",cmd);
 	system(cmd);
 }
@@ -265,6 +269,8 @@ int playback(int msgid,char *filename,int vol,int step)
 		printf(LOG_PREFX"play open file %s failed\n",filename);
 		return 0;
 	}
+	else
+		printf(LOG_PREFX"open %s ok\n",filename);
 	ms_filter_set_notify_callback(play, fileplay_eof, &done);
 	f1_w=ms_snd_card_create_writer(card_playback1);
 	if(f1_w!=NULL&&play!=NULL)
@@ -291,7 +297,7 @@ int playback(int msgid,char *filename,int vol,int step)
 			{
 				set_vol(vol+step*i);
 			}
-			ms_usleep(10000);
+			ms_sleep(1);
 			i++;
 		}
 
@@ -611,7 +617,8 @@ int main(int argc, char *argv[])
 						vol_i=atoi(vol_cur);
 						step_i=atoi(step);
 						if((strlen(step)!=0) && (strlen(vol_cur)!=0) && (strlen(file_name)!=0))
-						{
+						{							
+							strcpy(text_out,"b;21;w;2");
 							if((fpid=fork())==0)
 							{	
 								char *audio_state=(char *)shmat(shmid, 0, 0);
@@ -622,8 +629,6 @@ int main(int argc, char *argv[])
 								}
 								*audio_state&=~MUSIC_PLAY_START;
 								set_vol(vol);
-								strcpy(text_out,"b;21;w;2");
-								send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
 								exit(0);
 							}
 						}
@@ -631,7 +636,7 @@ int main(int argc, char *argv[])
 						{	
 							printf(LOG_PREFX"paramter is wrong %s\n",data.text);	
 							strcpy(text_out,"b;21;w;0");
-							send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
+							//send_msg(msgid,TYPE_AUDIO_TO_MAIN,AUDIO_TO_MAIN,text_out);
 						}
 					}
 					else

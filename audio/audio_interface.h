@@ -44,7 +44,7 @@ typedef short int SR_WORD ;
 #define CMD_21_RING_NOW_ARM					"21;"
 #define CMD_START_RECORD					"c;1"
 #define CMD_RCV_GRAMMAR_ID					"c;2;"
-#define CMD_20_RING_DELAY					"20;"
+#define CMD_20_RING_DELAY					"20"
 
 #define LOG_PREFX						"[AudioSubSystem]:"
 struct wave_pcm_hdr
