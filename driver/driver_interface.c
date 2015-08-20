@@ -22,7 +22,7 @@ int send_msg(int msgid,unsigned char msg_type,unsigned char id,unsigned char *te
 }
 int read_uart(int fd, char *rcv_buf,int data_len)
 {
-    int len,fs_sel;
+    int len,fs_sel,i=0,get_start=0,get_stop=0;
     fd_set fs_read;
    
     struct timeval time;
@@ -32,17 +32,30 @@ int read_uart(int fd, char *rcv_buf,int data_len)
    
     time.tv_sec = 10;
     time.tv_usec = 0;
-   
-    fs_sel = select(fd+1,&fs_read,NULL,NULL,&time);
-    if(fs_sel)
-   {
-          len = read(fd,rcv_buf,data_len);
-          return len;
-   }
-    else
-   {
-          return 0;
-   }     
+    while(1)
+    { 
+    	fs_sel = select(fd+1,&fs_read,NULL,NULL,&time);
+    	if(fs_sel)
+   	{
+           len=read(fd,rcv_buf+i,512);
+	   printf(LOG_PREFX"==>%s %d %c\n",rcv_buf,i,rcv_buf[i+len-1]);
+	   if(get_start==1)
+	{
+		if(rcv_buf[i+len-1]=='#')
+			break;
+		else
+			i+=len;
+	}
+	   if(rcv_buf[0]=='*')
+	   {
+		get_start=1;
+		i++;
+	   }
+	   
+
+   	}
+    }
+    return i;
 }
 
 int set_opt(int fd,int nSpeed, int nBits, char nEvent, int nStop)
