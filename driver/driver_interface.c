@@ -23,6 +23,7 @@ int send_msg(int msgid,unsigned char msg_type,unsigned char id,unsigned char *te
 int read_uart(int fd, char *rcv_buf,int data_len)
 {
     int len,fs_sel,i=0,get_start=0,get_stop=0;
+	char ch;
     fd_set fs_read;
    
     struct timeval time;
@@ -34,10 +35,32 @@ int read_uart(int fd, char *rcv_buf,int data_len)
     time.tv_usec = 0;
     while(1)
     { 
-    	fs_sel = select(fd+1,&fs_read,NULL,NULL,&time);
-    	if(fs_sel)
-   	{
-           len=read(fd,rcv_buf+i,512);
+    	//fs_sel = select(fd+1,&fs_read,NULL,NULL,&time);
+    	//if(fs_sel)
+   		{
+   			if(read(fd,&ch,1)!=0)
+   			{
+				if(get_start)
+				{
+					rcv_buf[i++]=ch;					
+					if(ch=='#')
+					{						
+						printf(LOG_PREFX"get stop %s\n",rcv_buf);
+						break;
+					}
+				}
+				else
+				{
+					if(ch=='*')
+					{
+						get_start=1;
+						i=1;
+						rcv_buf[0]=ch;
+						printf(LOG_PREFX"get start %c\n",ch);
+					}
+				}
+   			}
+          /* len=read(fd,rcv_buf+i,512);
 	   printf(LOG_PREFX"==>%s %d %c\n",rcv_buf,i,rcv_buf[i+len-1]);
 	   if(get_start==1)
 	{
@@ -50,10 +73,10 @@ int read_uart(int fd, char *rcv_buf,int data_len)
 	   {
 		get_start=1;
 		i++;
-	   }
+	   }*/
 	   
 
-   	}
+   		}
     }
     return i;
 }
@@ -140,7 +163,7 @@ int open_com_port()
 	int fd;
 	long  vdisable;
 		
-	fd = open( "/dev/ttySAC1", O_RDWR|O_NOCTTY|O_NDELAY);
+	fd = open( "/dev/ttySAC3", O_RDWR|O_NOCTTY|O_NDELAY);
 	if (-1 == fd){
 		perror("Can't Open Serial Port0");
 		return(-1);
