@@ -39,8 +39,8 @@ typedef short int SR_WORD ;
 
 #define CMD_01_MUSIC_PLAY					"b;01;?;"
 #define CMD_02_MUSIC_STOP					"b;02;?;"
-#define CMD_50_GET_VOL						"50"
-#define CMD_51_SET_VOL						"51;"
+#define CMD_50_GET_VOL						"b;50;?"
+#define CMD_51_SET_VOL						"b;51;?"
 #define CMD_21_RING_NOW_ARM					"21;"
 #define CMD_START_RECORD					"c;1"
 #define CMD_RCV_GRAMMAR_ID					"c;2;"

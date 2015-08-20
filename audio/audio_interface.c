@@ -531,24 +531,48 @@ int main(int argc, char *argv[])
 						strcpy(text_out,"s;0");
 					}
 				}
-				else if(strstr(data.text, CMD_51_SET_VOL)!=NULL)
-				{
-					//set vol from main process
-					printf(LOG_PREFX"set vol %s\n",data.text+3);
-					vol=atoi(data.text+3);
-					memcpy(vol_str,data.text+3,strlen(data.text)-3);
-					//set to low layer
-					set_vol(vol);
-					memcpy(text_out,data.text,3);
+				else if(data.text[2]=='5' && data.text[3]=='1')
+				{					
+					//set vol from main process					
+					memcpy(text_out,data.text,7);					
 					strcat(text_out,"0");
+					if(data.text[5]!='w')
+					{
+						printf(LOG_PREFX"set vol %s\n",data.text+7);
+						vol=atoi(data.text+7);
+						memcpy(vol_str,data.text+7,strlen(data.text)-7);
+						//set to low layer
+						set_vol(vol);
+					}
+					else
+					{	
+						printf(LOG_PREFX"in web set\n");
+						int i=7;
+						while(data.text[i]!=';' && data.text[i]!='\0')
+						{
+							vol_str[i-7]=data.text[i];
+							i++;
+						}
+						set_vol(atoi(vol_str));
+						strcat(text_out,data.text+i);
+					}
 				}
-				else if(strncmp(CMD_50_GET_VOL, data.text, strlen(CMD_50_GET_VOL)) == 0)
+				else if(data.text[2]=='5' && data.text[3]=='0')
 				{
 					//get vol from audio sub system 
-					printf(LOG_PREFX"get vol \n");
-					memcpy(text_out,data.text,2);
+					memcpy(text_out,data.text,6);
 					strcat(text_out,";");
-					strcat(text_out,vol_str);
+					if(data.text[5]!='w')
+					{
+						printf(LOG_PREFX"get vol in normal\n");
+						strcat(text_out,vol_str);
+					}
+					else
+					{
+						printf(LOG_PREFX"get vol in web\n");
+						strcat(text_out,vol_str);
+						strcat(text_out,data.text+6);
+					}
 				}
 				else if(strncmp(CMD_20_RING_DELAY, data.text, strlen(CMD_20_RING_DELAY)) == 0)
 				{
@@ -651,6 +675,7 @@ int main(int argc, char *argv[])
 				{		
 					//music play or stop
 					char mach_play_stop[8]={0};
+					char play_file[256]={0};
 					memcpy(mach_play_stop,data.text,7);
 					if(fnmatch(CMD_01_MUSIC_PLAY, mach_play_stop, FNM_PATHNAME) == 0)
 					{	
@@ -661,8 +686,20 @@ int main(int argc, char *argv[])
 							*audio_system_state|=MUSIC_PLAY_START;
 							if((fpid=fork())==0)
 							{
-								char *audio_state=(char *)shmat(shmid, 0, 0);
+								char *audio_state=(char *)shmat(shmid, 0, 0);								
+								int i=7;
 								memcpy(text_out,mach_play_stop,7);
+								printf(LOG_PREFX"in web set\n");
+								if(data.text[5]=='w')
+								{
+									while(data.text[i]!=';' && data.text[i]!='\0')
+									{
+										play_file[i-7]=data.text[i];
+										i++;
+									}
+								}
+								else
+									strcpy(play_file,data.text+7);
 								if(playback(msgid,data.text+7,0,0)==1)
 								{
 									strcat(text_out,"1");
@@ -670,6 +707,10 @@ int main(int argc, char *argv[])
 								else
 								{
 									strcat(text_out,"0");
+								}
+								if(data.text[5]=='w')
+								{
+									strcat(text_out,data.text+i);
 								}
 								*audio_state&=~MUSIC_PLAY_START;
 								shmdt(audio_state);
@@ -696,6 +737,15 @@ int main(int argc, char *argv[])
 							*audio_system_state&=~MUSIC_PLAY_START;
 						}
 						memcpy(text_out,mach_play_stop,6);
+						if(data.text[5]=='w')
+						{
+							int i=7;
+							while(data.text[i]!=';' && data.text[i]!='\0')
+							{
+								i++;
+							}
+							strcat(text_out,data.text+i);
+						}
 					}				
 				}
 				if(strlen(data.text)>4)
