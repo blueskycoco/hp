@@ -21,23 +21,26 @@ int send_msg(int msgid,unsigned char msg_type,unsigned char id,unsigned char *te
 	}
 	printf(LOG_PREFX"send msg done\n");
 }
-int read_file_line(char *file,int line_addr,char prv,char *out)
+FILE *open_file(char *file_name)
+{	
+	return fopen(file_name, "rb");
+}
+void close_file(FILE *fp)
 {
-	FILE * fp;
-	char * line = NULL;
+	fclose(fp);
+}
+int read_file_line(FILE *fp,int line_addr,char prv,char *out)
+{
+	char *line = NULL;
 	size_t len = 0;
 	int result=0;
 	int line_cnt=0;
 	ssize_t read;
 
-	fp = fopen(file, "rb");
-	if (fp == NULL)
-	   exit(-1);
-
+	fseek(fp,0L,SEEK_SET);
 	while ((read = getline(&line, &len, fp)) != -1) 
+	//while (fgets(line, 512, fp) != NULL) 
 	{
-	   //printf("\nRetrieved line of length %d :\n", read);
-	   //printf("%s", line);
 	   if(line_cnt==line_addr)
 	   {
 			memset(out,'\0',sizeof(out));
@@ -45,7 +48,7 @@ int read_file_line(char *file,int line_addr,char prv,char *out)
 			{
 				printf(LOG_PREFX"get %s",line);
 				strcpy(out,strchr(line,';')+1);
-				printf(LOG_PREFX"len %d\n",strlen(out));
+				printf(LOG_PREFX"len %ld\n",strlen(out));
 				out[strlen(out)-2]='\0';
 	   		}
 			else
@@ -62,22 +65,15 @@ int read_file_line(char *file,int line_addr,char prv,char *out)
 			result=1;
 			break;
 	   }
-	  // else
-	  // {
-	  // 		free(line);
-		//	line=NULL;
-	   //	}
 	   line_cnt++;
 	}
 	
 	free(line);
 	line=NULL;
 
-	fclose(fp);
-	//if (line)
-	  // free(line);
 	return result;
 }
+
 int set_music_like(char *file,char *music_id,int like,char *str)
 {
 	char buf[256]={0};
@@ -165,8 +161,6 @@ int set_light_use(char *file,char *mode_id,int like)
 		  found=1;
 		  i=0;
 	   	}
-		if(found==1)
-			i++;
 		if(i==6)
 		{
 			//set use or unuse
@@ -175,13 +169,21 @@ int set_light_use(char *file,char *mode_id,int like)
 				str[1]='0';
 			else
 				str[1]='1';
+			str[2]='\r';
+			str[3]='\n';
+			str[4]='\0';
 			found=0;
 			i=0;
+			read=7;
 		}
+		if(found==1)
+			i++;
 	   memcpy(file_write+write_pos,line,read);
  	   write_pos=write_pos+read;
-	   free(line);
+	  // free(line);
 	}
+	if(line)
+		free(line);
 	fclose(fp);
 	fp=fopen(file,"w");
 	fwrite(file_write,write_pos,1,fp);
@@ -651,32 +653,39 @@ int main(int argc, char *argv[])
 					else
 					{
 						int i;
-						for(i=0;i<file_line;i=i+FILE_MUSIC_LINES_RECORD)
+						FILE *fp=open_file(file_name);
+						if(fp!=NULL)
 						{
-							strcat(text_out,";music-id ");
-							if(read_file_line(file_name,i+FILE_MUSIC_NAME_LINE,0,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							memset(buf,'\0',25);
-							strcat(text_out,";music-name ");
-							if(read_file_line(file_name,i+FILE_MUSIC_NAME_LINE,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							memset(buf,'\0',25);
-							strcat(text_out,";singer ");
-							if(read_file_line(file_name,i+FILE_MUSIC_SINGER_LINE,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							memset(buf,'\0',25);
-							strcat(text_out,";music-like/unlike ");
-							if(read_file_line(file_name,i+FILE_MUSIC_LIKE_LINE,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
+							for(i=0;i<file_line;i=i+FILE_MUSIC_LINES_RECORD)
+							{
+								strcat(text_out,";music-id ");
+								if(read_file_line(fp,i+FILE_MUSIC_NAME_LINE,0,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								memset(buf,'\0',25);
+								strcat(text_out,";music-name ");
+								if(read_file_line(fp,i+FILE_MUSIC_NAME_LINE,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								memset(buf,'\0',25);
+								strcat(text_out,";singer ");
+								if(read_file_line(fp,i+FILE_MUSIC_SINGER_LINE,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								memset(buf,'\0',25);
+								strcat(text_out,";music-like/unlike ");
+								if(read_file_line(fp,i+FILE_MUSIC_LIKE_LINE,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+							}
+							close_file(fp);
 						}
+						else
+							strcat(text_out,"can not open file");
 						printf(LOG_PREFX"audio list %s\n",text_out);
 					}
 					memset(file_name,'\0',256);
@@ -723,29 +732,36 @@ int main(int argc, char *argv[])
 					else
 					{
 						int i;
-						for(i=0;i<file_line;i=i+FILE_MUSIC_LINES_RECORD)
+						FILE *fp=open_file(file_name);
+						if(fp!=NULL)
 						{
-							read_file_line(file_name,i+FILE_MUSIC_NAME_LINE,0,buf);
-							if(strncmp(buf,music_id,strlen(buf))==0)
+							for(i=0;i<file_line;i=i+FILE_MUSIC_LINES_RECORD)
 							{
-								read_file_line(file_name,i+FILE_MUSIC_PATH_LINE,1,buf);
-								strcat(text_out,buf);								
-								read_file_line(file_name,i+FILE_MUSIC_FILE_NAME_LINE,1,buf);
-								strcat(text_out,buf);
-								if(data.text[0]=='r' &&data.text[5]=='w')
+								read_file_line(fp,i+FILE_MUSIC_NAME_LINE,0,buf);
+								if(strncmp(buf,music_id,strlen(buf))==0)
 								{
-									strcat(text_out,";");
-									strcat(text_out,data.text+web_pos);
+									read_file_line(fp,i+FILE_MUSIC_PATH_LINE,1,buf);
+									strcat(text_out,buf);								
+									read_file_line(fp,i+FILE_MUSIC_FILE_NAME_LINE,1,buf);
+									strcat(text_out,buf);
+									if(data.text[0]=='r' &&data.text[5]=='w')
+									{
+										strcat(text_out,";");
+										strcat(text_out,data.text+web_pos);
+									}
+									printf(LOG_PREFX"get music %s\n",text_out);
+									break;
 								}
-								printf(LOG_PREFX"get music %s\n",text_out);
-								break;
+							}
+							close_file(fp);
+							if(i==file_line)
+							{
+								strcat(text_out,"unknown");
+								printf(LOG_PREFX"cant not find music by id %s\n",strrchr(data.text,';')+1);
 							}
 						}
-						if(i==file_line)
-						{
-							strcat(text_out,"unknown");
-							printf(LOG_PREFX"cant not find music by id %s\n",strrchr(data.text,';')+1);
-						}
+						else
+							strcat(text_out,"can not open file");
 					}
 				}
 				else if(data.text[2]=='0' && data.text[3]=='3')
@@ -896,7 +912,7 @@ int main(int argc, char *argv[])
 					}
 					else
 					{
-						if(data.text[2]=='0' && data.text[3]=='7')
+						if(data.text[2]=='1' && data.text[3]=='2')
 						{
 							if(data.text[5]!='w')
 								strcpy(text_out,"d;12;b;");
@@ -941,53 +957,65 @@ int main(int argc, char *argv[])
 					else
 					{
 						int i;
-						for(i=0;i<file_line;i=i+FILE_LIGHT_LINES_RECORD)
+						FILE *fp=open_file(file_name);
+						if(fp!=NULL)
 						{
-							if(read_file_line(file_name,i,0,buf));
+							for(i=0;i<file_line;i=i+FILE_LIGHT_LINES_RECORD)
 							{
-									if(strncmp(buf,light_id,strlen(buf))==0)
-									{
-										found=1;
-										break;
-									}
+								if(read_file_line(fp,i,0,buf));
+								{
+										if(strncmp(buf,light_id,strlen(buf))==0)
+										{
+											found=1;
+											break;
+										}
+								}
 							}
-						}
-						if(found)
-						{
-							if(read_file_line(file_name,i+1,1,buf))
-								strcat(text_out,buf);
+							if(found)
+							{
+								strcat(text_out,";");
+								if(read_file_line(fp,i+1,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								strcat(text_out,";");
+								memset(buf,'\0',25);
+								if(read_file_line(fp,i+2,2,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								strcat(text_out,";");
+								memset(buf,'\0',25);
+								if(read_file_line(fp,i+3,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								strcat(text_out,";");
+								memset(buf,'\0',25);
+								if(read_file_line(fp,i+4,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");	
+								strcat(text_out,";");
+								memset(buf,'\0',25);
+								if(read_file_line(fp,i+5,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+							}
 							else
-								strcat(text_out,"unknown");
-							memset(buf,'\0',25);
-							if(read_file_line(file_name,i+2,2,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							memset(buf,'\0',25);
-							if(read_file_line(file_name,i+3,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							memset(buf,'\0',25);
-							if(read_file_line(file_name,i+4,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");	
-							memset(buf,'\0',25);
-							if(read_file_line(file_name,i+5,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
+							{
+								strcat(text_out,";unknown");
+								strcat(text_out,";unknown");
+								strcat(text_out,";unknown");
+								strcat(text_out,";unknown");
+								strcat(text_out,";unknown");
+							}
+							close_file(fp);
 						}
 						else
-						{
-							strcat(text_out,";unknown");
-							strcat(text_out,";unknown");
-							strcat(text_out,";unknown");
-							strcat(text_out,";unknown");
-							strcat(text_out,";unknown");
-						}
-						if(data.text[5]=='w' &&((data.text[2]=='0' && data.text[3]=='7')||(data.text[2]=='1' && data.text[3]=='4')))
+							strcat(text_out,"can not open file");
+						if(data.text[5]=='w' &&((data.text[2]=='0' && data.text[3]=='7')||(data.text[2]=='1' && data.text[3]=='4')||(data.text[2]=='1' && data.text[3]=='2')))
 							strcat(text_out,data.text+j);
 						}
 						printf(LOG_PREFX"light list %s\n",text_out);
@@ -1015,26 +1043,34 @@ int main(int argc, char *argv[])
 					else
 					{
 						int i;
-						for(i=0;i<file_line;i=i+FILE_LIGHT_LINES_RECORD)
+						FILE *fp=open_file(file_name);
+						if(fp!=NULL)
 						{
-							strcat(text_out,";mode-id ");
-							if(read_file_line(file_name,i+FILE_LIGHT_NAME_LINE,0,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							memset(buf,'\0',128);
-							strcat(text_out,";mode-name ");
-							if(read_file_line(file_name,i+FILE_LIGHT_NAME_LINE,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							memset(buf,'\0',128);
-							strcat(text_out,";mode-use ");
-							if(read_file_line(file_name,i+FILE_LIGHT_MODE_USE,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
+							for(i=0;i<file_line;i=i+FILE_LIGHT_LINES_RECORD)
+							{
+								memset(buf,'\0',128);
+								strcat(text_out,";mode-id ");
+								if(read_file_line(fp,i+FILE_LIGHT_NAME_LINE,0,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								memset(buf,'\0',128);
+								strcat(text_out,";mode-name ");
+								if(read_file_line(fp,i+FILE_LIGHT_NAME_LINE,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								memset(buf,'\0',128);
+								strcat(text_out,";mode-use ");
+								if(read_file_line(fp,i+FILE_LIGHT_MODE_USE,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+							}
+							close_file(fp);
 						}
+						else
+							strcat(text_out,"can not open file");
 						printf(LOG_PREFX"light list %s\n",text_out);
 					}
 					memset(file_name,'\0',256);
@@ -1144,19 +1180,29 @@ int main(int argc, char *argv[])
 					file_name[len]=data.text[7];
 					file_name[len+1]=data.text[8];
 					strcat(file_name,".txt");
-					printf(LOG_PREFX"cmd 11 to open %s\n",file_name);
+					printf(LOG_PREFX"cmd 17 to open %s\n",file_name);
 					operation=0;
 					int file_line=get_file_lines(file_name);
 					if(strrchr(data.text,'?')!=NULL)
 					{						
 						strcpy(text_out,"g;17;b;");
-						if(file_line==0 || ((file_line%FILE_ALARM_LINES_RECORD)!=0))
+						if(file_line!=0 && ((file_line%FILE_ALARM_LINES_RECORD)==0))
 						{
-							read_file_line(file_name,file_line-FILE_ALARM_LINES_RECORD,0,buf);
-							strcat(text_out,buf);
+							FILE *fp=open_file(file_name);
+							if(fp!=NULL)
+							{
+								read_file_line(fp,file_line-FILE_ALARM_LINES_RECORD,0,buf);
+								strcat(text_out,buf);
+								close_file(fp);
+							}
+							else
+								strcat(text_out,"can not open file");
 						}
 						else
+						{
 							strcat(text_out,"unknown");
+							printf(LOG_PREFX"04 file lines %d\n",file_line);
+						}
 					}
 					else
 					{//change alarm setting
@@ -1200,17 +1246,24 @@ int main(int argc, char *argv[])
 						while(data.text[i]!='\0' && data.text[i]!=';')
 							i++;
 						memcpy(alarm_vol_change_freq,data.text+j,i-j);
-						for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
+						FILE *fp=open_file(file_name);
+						if(fp!=NULL)
 						{
-							if(read_file_line(file_name,i,0,buf));
+							for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
 							{
-									if(strncmp(buf,alarm_id,strlen(buf))==0)
-									{
-										found=1;
-										break;
-									}
+								if(read_file_line(fp,i,0,buf));
+								{
+										if(strncmp(buf,alarm_id,strlen(buf))==0)
+										{
+											found=1;
+											break;
+										}
+								}
 							}
-						}					
+							close_file(fp);
+						}
+						else
+							strcat(text_out,"can not open file");
 						if(data.text[5]=='b')
 							strcpy(text_out,"g;17;b;0");
 						else
@@ -1292,28 +1345,35 @@ int main(int argc, char *argv[])
 					}
 					else
 					{
-						for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
+						FILE *fp=open_file(file_name);
+						if(fp!=NULL)
 						{
-							if(read_file_line(file_name,i,0,buf));
+							for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
 							{
-									if(strncmp(buf,alarm_id,strlen(buf))==0)
-									{
-										found=1;
-										break;
-									}
+								if(read_file_line(fp,i,0,buf));
+								{
+										if(strncmp(buf,alarm_id,strlen(buf))==0)
+										{
+											found=1;
+											break;
+										}
+								}
 							}
-						}
-						if(found)
-						{
-							if(read_file_line(file_name,i+8,1,buf))
-								strcat(text_out,buf);
+							if(found)
+							{
+								if(read_file_line(fp,i+8,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,";unknown");
+							}
 							else
+							{
 								strcat(text_out,";unknown");
+							}
+							close_file(fp);
 						}
 						else
-						{
-							strcat(text_out,";unknown");
-						}
+							strcat(text_out,"can not open file");
 					}
 					printf(LOG_PREFX"text out %s\n",text_out);
 				}
@@ -1342,53 +1402,60 @@ int main(int argc, char *argv[])
 					}
 					else
 					{
-						for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
+						FILE *fp=open_file(file_name);
+						if(fp!=NULL)
 						{
-							if(read_file_line(file_name,i,0,buf));
+							for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
 							{
-									if(strncmp(buf,alarm_id,strlen(buf))==0)
-									{
-										found=1;
-										break;
-									}
+								if(read_file_line(fp,i,0,buf));
+								{
+										if(strncmp(buf,alarm_id,strlen(buf))==0)
+										{
+											found=1;
+											break;
+										}
+								}
 							}
-						}
-						if(found)
-						{
-							if(read_file_line(file_name,i+2,1,buf))
-								strcat(text_out,buf);
+							if(found)
+							{
+								if(read_file_line(fp,i+2,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								if(read_file_line(fp,i+3,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");							
+								if(read_file_line(fp,i+4,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								if(read_file_line(fp,i+5,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								if(read_file_line(fp,i+6,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");							
+								if(read_file_line(fp,i+7,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+							}
 							else
-								strcat(text_out,"unknown");
-							if(read_file_line(file_name,i+3,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");							
-							if(read_file_line(file_name,i+4,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							if(read_file_line(file_name,i+5,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							if(read_file_line(file_name,i+6,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");							
-							if(read_file_line(file_name,i+7,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
+							{
+								strcat(text_out,";unknown");
+								strcat(text_out,";unknown");
+								strcat(text_out,";unknown");
+								strcat(text_out,";unknown");
+								strcat(text_out,";unknown");
+								strcat(text_out,";unknown");
+							}
+							close_file(fp);
 						}
 						else
-						{
-							strcat(text_out,";unknown");
-							strcat(text_out,";unknown");
-							strcat(text_out,";unknown");
-							strcat(text_out,";unknown");
-							strcat(text_out,";unknown");
-							strcat(text_out,";unknown");
-						}
+							strcat(text_out,"can not open file");
 					}
 					printf(LOG_PREFX"text out %s\n",text_out);
 				}
@@ -1431,8 +1498,15 @@ int main(int argc, char *argv[])
 						strcpy(text_out,"g;24;b;");
 						if(file_line==0 || ((file_line%FILE_ALERT_LINES_RECORD)!=0))
 						{
-							read_file_line(file_name,file_line-FILE_ALARM_LINES_RECORD,0,buf);
-							strcat(text_out,buf);
+							FILE *fp=open_file(file_name);
+							if(fp!=NULL)
+							{
+								read_file_line(fp,file_line-FILE_ALARM_LINES_RECORD,0,buf);
+								strcat(text_out,buf);
+								close_file(fp);
+							}
+							else
+								strcat(text_out,"can not open file");							
 						}
 						else
 							strcat(text_out,"unknown");
@@ -1478,17 +1552,24 @@ int main(int argc, char *argv[])
 						while(data.text[i]!='\0' && data.text[i]!=';')
 							i++;
 						memcpy(alert_freq,data.text+j,i-j);
-						for(i=0;i<file_line;i=i+FILE_ALERT_LINES_RECORD)
+						FILE *fp=open_file(file_name);
+						if(fp!=NULL)
 						{
-							if(read_file_line(file_name,i,0,buf));
+							for(i=0;i<file_line;i=i+FILE_ALERT_LINES_RECORD)
 							{
-									if(strncmp(buf,alert_id,strlen(buf))==0)
-									{
-										found=1;
-										break;
-									}
+								if(read_file_line(fp,i,0,buf));
+								{
+										if(strncmp(buf,alert_id,strlen(buf))==0)
+										{
+											found=1;
+											break;
+										}
+								}
 							}
-						}					
+							close_file(fp);
+						}
+						else
+							strcat(text_out,"can not open file");
 						if(data.text[5]=='b')
 							strcpy(text_out,"g;24;b;0");
 						else
@@ -1522,33 +1603,40 @@ int main(int argc, char *argv[])
 					}
 					else
 					{
-						for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
+						FILE *fp=open_file(file_name);
+						if(fp!=NULL)
 						{
-							if(read_file_line(file_name,i,0,buf));
+							for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
 							{
-									if(strncmp(buf,alarm_id,strlen(buf))==0)
-									{
-										found=1;
-										break;
-									}
+								if(read_file_line(fp,i,0,buf));
+								{
+										if(strncmp(buf,alarm_id,strlen(buf))==0)
+										{
+											found=1;
+											break;
+										}
+								}
 							}
-						}
-						if(found)
-						{
-							if(read_file_line(file_name,i,1,buf))
-								strcat(text_out,buf);
+							if(found)
+							{
+								if(read_file_line(fp,i,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								if(read_file_line(fp,i+1,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown"); 		
+							}
 							else
-								strcat(text_out,"unknown");
-							if(read_file_line(file_name,i+1,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown"); 		
+							{
+								strcat(text_out,";unknown");
+								strcat(text_out,";unknown");
+							}
+							close_file(fp);
 						}
 						else
-						{
-							strcat(text_out,";unknown");
-							strcat(text_out,";unknown");
-						}
+							strcat(text_out,"can not open file");
 					}
 					printf(LOG_PREFX"text out %s\n",text_out);
 
@@ -1577,37 +1665,46 @@ int main(int argc, char *argv[])
 					else
 					{
 						int i;
-						for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
+						FILE *fp=open_file(file_name);
+						if(fp!=NULL)
 						{
-							strcat(text_out,";ring-id ");
-							if(read_file_line(file_name,i+0,0,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							memset(buf,'\0',25);
-							strcat(text_out,";");
-							if(read_file_line(file_name,i+0,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							memset(buf,'\0',25);
-							strcat(text_out,";");
-							if(read_file_line(file_name,i+1,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
-							memset(buf,'\0',25);
-							strcat(text_out,";");
-							if(read_file_line(file_name,i+3,1,buf))
-								strcat(text_out,buf);
-							else
-								strcat(text_out,"unknown");
+							for(i=0;i<file_line;i=i+FILE_ALARM_LINES_RECORD)
+							{
+								strcat(text_out,";ring-id ");
+								if(read_file_line(fp,i+0,0,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								memset(buf,'\0',25);
+								strcat(text_out,";");
+								if(read_file_line(fp,i+0,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								memset(buf,'\0',25);
+								strcat(text_out,";");
+								if(read_file_line(fp,i+1,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+								memset(buf,'\0',25);
+								strcat(text_out,";");
+								if(read_file_line(fp,i+3,1,buf))
+									strcat(text_out,buf);
+								else
+									strcat(text_out,"unknown");
+							}
+							close_file(fp);
 						}
+						else
+							strcat(text_out,"can not open file");
 						printf(LOG_PREFX"audio list %s\n",text_out);
 					}
 					memset(file_name,'\0',256);
 
 				}
+				else
+					strcpy(text_out,"msg.text is wrong,please add \" \"");
 				send_msg(msgid,TYPE_FILE_TO_MAIN,FILE_TO_MAIN,text_out);
 			}
 			
