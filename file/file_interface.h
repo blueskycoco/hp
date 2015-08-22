@@ -52,7 +52,7 @@
 #define FILE_LIGHT_NAME_LINE	0
 #define FILE_LIGHT_MODE_USE		6
 #define FILE_ALARM_LINES_RECORD	9
-#define FILE_ALERT_LINES_RECORD	5
+#define FILE_ALERT_LINES_RECORD	6
 
 struct msg_st
 {  
