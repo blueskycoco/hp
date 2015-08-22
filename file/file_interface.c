@@ -49,6 +49,7 @@ int read_file_line(FILE *fp,int line_addr,char prv,char *out)
 				printf(LOG_PREFX"get %s",line);
 				strcpy(out,strchr(line,';')+1);
 				printf(LOG_PREFX"len %ld\n",strlen(out));
+				if(out[strlen(out)-1]=='\n')
 				out[strlen(out)-2]='\0';
 	   		}
 			else
@@ -243,7 +244,7 @@ int set_alarm_on(char *file,char *alarm_id,int like)
 	int flen=ftell(fp);
 	fseek(fp,0L,SEEK_SET);
 	char *file_write;
-	file_write=(char *)malloc(flen);	
+	file_write=(char *)malloc(flen+1);	
 	while ((read = getline(&line, &len, fp)) != -1) 
 	{	
 		if(strncmp(line,alarm_id,strlen(alarm_id))==0)
@@ -251,8 +252,6 @@ int set_alarm_on(char *file,char *alarm_id,int like)
 		  found=1;
 		  i=0;
 	   	}
-		if(found==1)
-			i++;
 		if(i==3)
 		{
 			//set use or unuse
@@ -261,13 +260,18 @@ int set_alarm_on(char *file,char *alarm_id,int like)
 				str[1]='a';
 			else
 				str[1]='b';
+			str[2]='\r';
+			str[3]='\n';
+			str[4]='\0';
 			found=0;
 			i=0;
 		}
-	   memcpy(file_write+write_pos,line,read);
- 	   write_pos=write_pos+read;
-	   free(line);
+		if(found==1)
+			i++;
+	   memcpy(file_write+write_pos,line,strlen(line));
+ 	   write_pos=write_pos+strlen(line);
 	}
+	free(line);
 	fclose(fp);
 	fp=fopen(file,"w");
 	fwrite(file_write,write_pos,1,fp);
@@ -461,58 +465,91 @@ int write_alarm(char *file,int found,char *alarm_id,char *alarm_time,char *alarm
 	fseek(fp,0L,SEEK_SET);
 	char *file_write;
 	if(found)		
+	{
 		file_write=(char *)malloc(flen+strlen(alarm_id)+strlen(alarm_time)+strlen(alarm_freq)+strlen(alarm_vol)+strlen(alarm_blance)+strlen(alarm_change)+strlen(alarm_change_freq)+1);		
+		memset(file_write,'\0',flen+strlen(alarm_id)+strlen(alarm_time)+strlen(alarm_freq)+strlen(alarm_vol)+strlen(alarm_blance)+strlen(alarm_change)+strlen(alarm_change_freq)+1);	
+	}	
 	else
+	{
 		file_write=(char *)malloc(flen+5*strlen(alarm_id)+strlen(alarm_time)+strlen(alarm_freq)+strlen(alarm_vol)+strlen(alarm_blance)+strlen(alarm_change)+strlen(alarm_change_freq)+1);		
+		memset(file_write,'\0',flen+5*strlen(alarm_id)+strlen(alarm_time)+strlen(alarm_freq)+strlen(alarm_vol)+strlen(alarm_blance)+strlen(alarm_change)+strlen(alarm_change_freq)+1);		
+	}
 	while ((read = getline(&line, &len, fp)) != -1) 
 	{	
 		if(found && strncmp(line,alarm_id,strlen(alarm_id))==0)
 		{
-			char *a_id=strdup(alarm_id);
-		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  file_write[write_pos+strlen(a_id)]=';';
-		  memcpy(file_write+write_pos+strlen(a_id)+1,alarm_time,strlen(alarm_time));
-		  memcpy(file_write+write_pos+strlen(a_id)+1+2+strlen(alarm_time),last,2);
-		  write_pos=write_pos+strlen(a_id)+1+2+strlen(alarm_time);
-		  a_id=a_id+'1';
-		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  file_write[write_pos+strlen(a_id)]=';';
-		  memcpy(file_write+write_pos+strlen(a_id)+1,alarm_freq,strlen(alarm_freq));
-		  memcpy(file_write+write_pos+strlen(a_id)+1+2+strlen(alarm_freq),last,2);
-		  write_pos=write_pos+strlen(a_id)+1+2+strlen(alarm_freq);
-		  a_id=a_id+'1';
-		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  file_write[write_pos+strlen(a_id)]=';';
-		  memcpy(file_write+write_pos+strlen(a_id)+1,alarm_vol,strlen(alarm_vol));
-		  memcpy(file_write+write_pos+strlen(a_id)+1+2+strlen(alarm_vol),last,2);
-		  write_pos=write_pos+strlen(a_id)+1+2+strlen(alarm_vol);
-		  a_id=a_id+'1';
-		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  file_write[write_pos+strlen(a_id)]=';';
-		  memcpy(file_write+write_pos+strlen(a_id)+1,alarm_blance,strlen(alarm_blance));
-		  memcpy(file_write+write_pos+strlen(a_id)+1+2+strlen(alarm_blance),last,2);
-		  write_pos=write_pos+strlen(a_id)+1+2+strlen(alarm_blance);
-		  a_id=a_id+'1';
-		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  file_write[write_pos+strlen(a_id)]=';';
-		  memcpy(file_write+write_pos+strlen(a_id)+1,alarm_change,strlen(alarm_change));
-		  memcpy(file_write+write_pos+strlen(a_id)+1+2+strlen(alarm_change),last,2);
-		  write_pos=write_pos+strlen(a_id)+1+2+strlen(alarm_change);
-		  a_id=a_id+'1';
-		  memcpy(file_write+write_pos,a_id,strlen(a_id));
-		  file_write[write_pos+strlen(a_id)]=';';
-		  memcpy(file_write+write_pos+strlen(a_id)+1,alarm_change_freq,strlen(alarm_change_freq));
-		  memcpy(file_write+write_pos+strlen(a_id)+1+2+strlen(alarm_change_freq),last,2);
-		  write_pos=write_pos+strlen(a_id)+1+2+strlen(alarm_change_freq);
-		  free(a_id);
+		  int a_id=atoi(alarm_id);
+		  char str_a_id[4]={0};
+		  //time
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,alarm_time,strlen(alarm_time));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(alarm_time),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(alarm_time);
+		  //freq 
+		  a_id=a_id+1;
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,alarm_freq,strlen(alarm_freq));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(alarm_freq),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(alarm_freq);
+		  getline(&line, &len, fp);
+		  getline(&line, &len, fp);
+		  memcpy(file_write+write_pos,line,strlen(line));
+	 	  write_pos=write_pos+strlen(line);
+		  getline(&line, &len, fp);
+		  memcpy(file_write+write_pos,line,strlen(line));
+	 	  write_pos=write_pos+strlen(line);
+	          //vol
+		  a_id=a_id+3;
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,alarm_vol,strlen(alarm_vol));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(alarm_vol),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(alarm_vol);
+		  //blance	
+		  a_id=a_id+1;
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,alarm_blance,strlen(alarm_blance));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(alarm_blance),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(alarm_blance);
+                  //change
+		  a_id=a_id+1;
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,alarm_change,strlen(alarm_change));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(alarm_change),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(alarm_change);
+                  //change freq
+		  a_id=a_id+1;
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,alarm_change_freq,strlen(alarm_change_freq));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(alarm_change_freq),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(alarm_change_freq);
+		  getline(&line, &len, fp);
+		  getline(&line, &len, fp);
+		  getline(&line, &len, fp);
+		  getline(&line, &len, fp);
+		  getline(&line, &len, fp);
+		  memcpy(file_write+write_pos,line,strlen(line));
+	 	  write_pos=write_pos+strlen(line);
+		  printf(LOG_PREFX"\n%s",file_write);
 	   }
 	   else
 	   {
 		   memcpy(file_write+write_pos,line,read);
 	 	   write_pos=write_pos+read;
 	   }
-	   free(line);
 	}
+	free(line);
 	fclose(fp);
 	
 	fp=fopen(file,"w");
@@ -520,48 +557,75 @@ int write_alarm(char *file,int found,char *alarm_id,char *alarm_time,char *alarm
 	if(found==0)
 	{	
 		char line[64]={0};
-		char *a_id=strdup(alarm_id);
-		strcpy(line,a_id);
+		int a_id=atoi(alarm_id);
+		char str_a_id[4]={0};
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,"\r\n");
+		strcat(line,str_a_id);
 		strcat(line,";");
 		strcat(line,alarm_time);
-		strcat(line,"/r/n");
+		strcat(line,"\r\n");
 		fwrite(line,strlen(line),1,fp);
 		memset(line,'0',64);
-		a_id=a_id+'1';
-		strcpy(line,a_id);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
 		strcat(line,";");
 		strcat(line,alarm_freq);
-		strcat(line,"/r/n");
+		strcat(line,"\r\n");
 		fwrite(line,strlen(line),1,fp);
 		memset(line,'0',64);
-		a_id=a_id+'1';
-		strcpy(line,a_id);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,"unknown\r\n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,"unknown\r\n");
+		fwrite(line,strlen(line),1,fp);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
 		strcat(line,";");
 		strcat(line,alarm_vol);
-		strcat(line,"/r/n");
+		strcat(line,"\r\n");
 		fwrite(line,strlen(line),1,fp);
 		memset(line,'0',64);
-		a_id=a_id+'1';
-		strcpy(line,a_id);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
 		strcat(line,";");
 		strcat(line,alarm_blance);
-		strcat(line,"/r/n");
+		strcat(line,"\r\n");
 		fwrite(line,strlen(line),1,fp);
 		memset(line,'0',64);
-		a_id=a_id+'1';
-		strcpy(line,a_id);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
 		strcat(line,";");
 		strcat(line,alarm_change);
-		strcat(line,"/r/n");
+		strcat(line,"\r\n");
 		fwrite(line,strlen(line),1,fp);
 		memset(line,'0',64);
-		a_id=a_id+'1';
-		strcpy(line,a_id);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
 		strcat(line,";");
 		strcat(line,alarm_change_freq);
-		strcat(line,"/r/n");
+		strcat(line,"\r\n");
 		fwrite(line,strlen(line),1,fp);
-		free(a_id);
+		memset(line,'0',64);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,"unknown");
+		fwrite(line,strlen(line),1,fp);
 	}
 	fclose(fp);
 	result=1;
@@ -1137,7 +1201,6 @@ int main(int argc, char *argv[])
 					else
 					{
 						strcpy(text_out,"g;15;w;0");
-						strcat(text_out,";");
 						strcat(text_out,data.text+i);
 					}
 					printf(LOG_PREFX"text_out is %s\n",text_out);
@@ -1167,7 +1230,6 @@ int main(int argc, char *argv[])
 					else
 					{
 						strcpy(text_out,"g;16;w;0");
-						strcat(text_out,";");
 						strcat(text_out,data.text+i);
 					}
 					printf(LOG_PREFX"text_out is %s\n",text_out);
@@ -1177,22 +1239,32 @@ int main(int argc, char *argv[])
 				{//17
 					char buf[25]={0};
 					len=strlen(FILE_PATH_NAME);
-					file_name[len]=data.text[7];
-					file_name[len+1]=data.text[8];
-					strcat(file_name,".txt");
 					printf(LOG_PREFX"cmd 17 to open %s\n",file_name);
 					operation=0;
-					int file_line=get_file_lines(file_name);
 					if(strrchr(data.text,'?')!=NULL)
 					{						
-						strcpy(text_out,"g;17;b;");
+						file_name[len]=data.text[7];
+						file_name[len+1]=data.text[8];
+						strcat(file_name,".txt");
+						int file_line=get_file_lines(file_name);
 						if(file_line!=0 && ((file_line%FILE_ALARM_LINES_RECORD)==0))
 						{
 							FILE *fp=open_file(file_name);
 							if(fp!=NULL)
 							{
 								read_file_line(fp,file_line-FILE_ALARM_LINES_RECORD,0,buf);
-								strcat(text_out,buf);
+								if(data.text[5]=='b')
+								{
+									strcpy(text_out,"g;17;b;");
+									strcat(text_out,buf);
+								}	
+								else
+								{
+									strcpy(text_out,"g;17;w;");
+									strcat(text_out,buf);
+									strcat(text_out,";");
+									strcat(text_out,strrchr(data.text,';')+1);
+								}
 								close_file(fp);
 							}
 							else
@@ -1214,38 +1286,43 @@ int main(int argc, char *argv[])
 						char alarm_blance[10]={0};
 						char alarm_change[10]={0};
 						char alarm_vol_change_freq[10]={0};
-						int i=10,j=0;
+						int i=7,j=0,commandid_pos=0;
+						file_name[len]='0';
+						file_name[len+1]='4';
+						strcat(file_name,".txt");
+						int file_line=get_file_lines(file_name);
 						while(data.text[i]!='\0' && data.text[i]!=';')
 							i++;
-						memcpy(alarm_id,data.text+10,i-10);
+						memcpy(alarm_id,data.text+7,i-7);
 						j=i++;
 						while(data.text[i]!='\0' && data.text[i]!=';')
 							i++;
-						memcpy(alarm_time,data.text+j,i-j);
+						memcpy(alarm_time,data.text+j+1,i-j-1);
+						j=i++;
+						//while(data.text[i]!='\0' && data.text[i]!=';')
+						//	i++;
+						//memcpy(alarm_time+2,data.text+j,i-j);
+						//j=i++;
+						while(data.text[i]!='\0' && data.text[i]!=';')
+							i++;
+						memcpy(alarm_freq,data.text+j+1,i-j-1);
 						j=i++;
 						while(data.text[i]!='\0' && data.text[i]!=';')
 							i++;
-						memcpy(alarm_time+2,data.text+j,i-j);
+						memcpy(alarm_vol,data.text+j+1,i-j-1);
 						j=i++;
 						while(data.text[i]!='\0' && data.text[i]!=';')
 							i++;
-						memcpy(alarm_freq,data.text+j,i-j);
+						memcpy(alarm_blance,data.text+j+1,i-j-1);
 						j=i++;
 						while(data.text[i]!='\0' && data.text[i]!=';')
 							i++;
-						memcpy(alarm_vol,data.text+j,i-j);
+						memcpy(alarm_change,data.text+j+1,i-j-1);
 						j=i++;
 						while(data.text[i]!='\0' && data.text[i]!=';')
 							i++;
-						memcpy(alarm_blance,data.text+j,i-j);
-						j=i++;
-						while(data.text[i]!='\0' && data.text[i]!=';')
-							i++;
-						memcpy(alarm_change,data.text+j,i-j);
-						j=i++;
-						while(data.text[i]!='\0' && data.text[i]!=';')
-							i++;
-						memcpy(alarm_vol_change_freq,data.text+j,i-j);
+						commandid_pos=i;
+						memcpy(alarm_vol_change_freq,data.text+j+1,i-j-1);
 						FILE *fp=open_file(file_name);
 						if(fp!=NULL)
 						{
@@ -1268,10 +1345,17 @@ int main(int argc, char *argv[])
 							strcpy(text_out,"g;17;b;0");
 						else
 						{
-							strcpy(text_out,"g;17;w;0;");
-							strcat(text_out,data.text+i);
+							strcpy(text_out,"g;17;w;0");
+							strcat(text_out,data.text+commandid_pos);
 						}
-						printf(LOG_PREFX"alarm_id %s \nalarm_time %s \nalarm_freq %s \nalarm_vol %s \nalarm_blance %s \nalarm_change %s \nalarm_vol_change_freq %s\n",alarm_id,alarm_time,alarm_freq,alarm_vol,alarm_blance,alarm_change,alarm_vol_change_freq);
+						printf(LOG_PREFX"\nalarm_id %s \nalarm_time %s \nalarm_freq %s \nalarm_vol %s \nalarm_blance %s \nalarm_change %s \nalarm_vol_change_freq %s\n",alarm_id,alarm_time,alarm_freq,alarm_vol,alarm_blance,alarm_change,alarm_vol_change_freq);
+						if(strlen(alarm_id)!=0 &&
+							strlen(alarm_time)!=0 &&
+							strlen(alarm_freq)!=0 &&
+							strlen(alarm_vol)!=0 &&
+							strlen(alarm_blance)!=0 &&
+							strlen(alarm_change)!=0 &&
+							strlen(alarm_vol_change_freq)!=0)
 						write_alarm(file_name,found,alarm_id,alarm_time,alarm_freq,alarm_vol,alarm_blance,alarm_change,alarm_vol_change_freq);
 					}
 				}
@@ -1294,7 +1378,7 @@ int main(int argc, char *argv[])
 						strcpy(text_out,"g;18;b;0");
 					else
 					{
-						strcpy(text_out,"g;18;w;0;");
+						strcpy(text_out,"g;18;w;0");
 						strcat(text_out,data.text+i);
 					}
 					printf(LOG_PREFX"text_out is %s\n",text_out);
@@ -1319,7 +1403,7 @@ int main(int argc, char *argv[])
 						strcpy(text_out,"g;19;b;0");
 					else
 					{
-						strcpy(text_out,"g;19;w;0;");
+						strcpy(text_out,"g;19;w;0");
 						strcat(text_out,data.text+i);
 					}
 					printf(LOG_PREFX"text_out is %s\n",text_out);
@@ -1387,7 +1471,7 @@ int main(int argc, char *argv[])
 					strcat(file_name,".txt");
 					printf(LOG_PREFX"cmd 21 to open %s\n",file_name);
 					int found=0;
-					strcpy(text_out,"d;21;04;");
+					strcpy(text_out,"d;21;04");
 					int i;
 					strcpy(alarm_id,strrchr(data.text,';')+1);
 					int file_line=get_file_lines(file_name);
@@ -1418,26 +1502,32 @@ int main(int argc, char *argv[])
 							}
 							if(found)
 							{
+								strcat(text_out,";");
 								if(read_file_line(fp,i+2,1,buf))
 									strcat(text_out,buf);
 								else
 									strcat(text_out,"unknown");
+								strcat(text_out,";");
 								if(read_file_line(fp,i+3,1,buf))
 									strcat(text_out,buf);
 								else
 									strcat(text_out,"unknown");							
+								strcat(text_out,";");
 								if(read_file_line(fp,i+4,1,buf))
 									strcat(text_out,buf);
 								else
 									strcat(text_out,"unknown");
+								strcat(text_out,";");
 								if(read_file_line(fp,i+5,1,buf))
 									strcat(text_out,buf);
 								else
 									strcat(text_out,"unknown");
+								strcat(text_out,";");
 								if(read_file_line(fp,i+6,1,buf))
 									strcat(text_out,buf);
 								else
 									strcat(text_out,"unknown");							
+								strcat(text_out,";");
 								if(read_file_line(fp,i+7,1,buf))
 									strcat(text_out,buf);
 								else
