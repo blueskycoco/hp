@@ -501,7 +501,253 @@ int write_alert(char *file,int found,char *alert_id,char *alert_name,char *alert
 	
 	return result;	
 }
-
+int write_lamp(char *file,int found,char *lamp_id,char *lamp_code,char *lamp_name,char *rom_position)
+{
+	char buf[256]={0};
+	int result=0;
+	char * line = NULL;
+	size_t len = 0;
+	char last[3]="\r\n";
+	int write_pos=0,read=0;
+	FILE *fp=fopen(file,"r");
+	fseek(fp,0L,SEEK_END);
+	int flen=ftell(fp);
+	fseek(fp,0L,SEEK_SET);
+	char *file_write;
+	if(found)		
+	{
+		file_write=(char *)malloc(flen+strlen(lamp_id)+strlen(lamp_code)+strlen(lamp_name)+strlen(rom_position)+1);		
+		memset(file_write,'\0',flen+strlen(lamp_id)+strlen(lamp_code)+strlen(lamp_name)+strlen(rom_position)+1);	
+	}	
+	else
+	{
+		file_write=(char *)malloc(flen+3*strlen(lamp_id)+strlen(lamp_code)+strlen(lamp_name)+strlen(rom_position)+1);		
+		memset(file_write,'\0',flen+3*strlen(lamp_id)+strlen(lamp_code)+strlen(lamp_name)+strlen(rom_position)+1);		
+	}
+	while ((read = getline(&line, &len, fp)) != -1) 
+	{	
+		if(found && strncmp(line,lamp_id,strlen(lamp_id))==0)
+		{
+		  int a_id=atoi(lamp_id);
+		  char str_a_id[4]={0};
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,lamp_code,strlen(lamp_code));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(lamp_code),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(lamp_code);
+		  a_id=a_id+1;
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,lamp_name,strlen(lamp_name));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(lamp_name),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(lamp_name);
+		  a_id=a_id+1;
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,rom_position,strlen(rom_position));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(rom_position),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(rom_position);
+		  printf(LOG_PREFX"\n%s",file_write);
+		  getline(&line, &len, fp);
+		  getline(&line, &len, fp);
+	   }
+	   else
+	   {
+		   memcpy(file_write+write_pos,line,read);
+	 	   write_pos=write_pos+read;
+	   }
+	}
+	free(line);
+	fclose(fp);
+	printf(LOG_PREFX"w %s",file_write);	
+	fp=fopen(file,"w");
+	fwrite(file_write,write_pos,1,fp);	
+	if(found==0)
+	{	
+		char line[64]={0};
+		int a_id=atoi(lamp_id);
+		char str_a_id[4]={0};
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,lamp_code);
+		strcat(line,"\r\n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,lamp_name);
+		strcat(line,"\r\n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,rom_position);
+		strcat(line,"\r\n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,"unknown");
+		strcat(line,"\r\n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,"unknown");
+		strcat(line,"\r\n");
+		fwrite(line,strlen(line),1,fp);
+	}
+	fclose(fp);
+	result=1;
+	
+	return result;	
+}
+int write_switch(char *file,int found,char *switch_id,char *switch_code,char *switch_name,char *rom_position)
+{
+	char buf[256]={0};
+	int result=0;
+	char * line = NULL;
+	size_t len = 0;
+	char last[3]="\r\n";
+	int write_pos=0,read=0;
+	FILE *fp=fopen(file,"r");
+	fseek(fp,0L,SEEK_END);
+	int flen=ftell(fp);
+	fseek(fp,0L,SEEK_SET);
+	char *file_write;
+	if(found)		
+	{
+		file_write=(char *)malloc(flen+strlen(switch_id)+strlen(switch_code)+strlen(switch_name)+strlen(rom_position)+1);		
+		memset(file_write,'\0',flen+strlen(switch_id)+strlen(switch_code)+strlen(switch_name)+strlen(rom_position)+1);	
+	}	
+	else
+	{
+		file_write=(char *)malloc(flen+3*strlen(switch_id)+strlen(switch_code)+strlen(switch_name)+strlen(rom_position)+1);		
+		memset(file_write,'\0',flen+3*strlen(switch_id)+strlen(switch_code)+strlen(switch_name)+strlen(rom_position)+1);		
+	}
+	while ((read = getline(&line, &len, fp)) != -1) 
+	{	
+		if(found && strncmp(line,switch_id,strlen(switch_id))==0)
+		{
+		  int a_id=atoi(switch_id);
+		  char str_a_id[4]={0};
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,switch_code,strlen(switch_code));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(switch_code),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(switch_code);
+		  a_id=a_id+1;
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,switch_name,strlen(switch_name));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(switch_name),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(switch_name);
+		  a_id=a_id+1;
+		  sprintf(str_a_id,"%03d",a_id);
+		  memcpy(file_write+write_pos,str_a_id,strlen(str_a_id));
+		  file_write[write_pos+strlen(str_a_id)]=';';
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1,rom_position,strlen(rom_position));
+		  memcpy(file_write+write_pos+strlen(str_a_id)+1+strlen(rom_position),last,2);
+		  write_pos=write_pos+strlen(str_a_id)+1+2+strlen(rom_position);
+		  printf(LOG_PREFX"\n%s",file_write);
+		  getline(&line, &len, fp);
+		  getline(&line, &len, fp);
+	   }
+	   else
+	   {
+		   memcpy(file_write+write_pos,line,read);
+	 	   write_pos=write_pos+read;
+	   }
+	}
+	free(line);
+	fclose(fp);
+	
+	fp=fopen(file,"w");
+	fwrite(file_write,write_pos,1,fp);	
+	if(found==0)
+	{	
+		char line[64]={0};
+		int a_id=atoi(switch_id);
+		char str_a_id[4]={0};
+		sprintf(str_a_id,"%03d",a_id-3);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,"unknown");
+		strcat(line,"\r\n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		sprintf(str_a_id,"%03d",a_id-2);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,"unknown");
+		strcat(line,"\r\n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		sprintf(str_a_id,"%03d",a_id-1);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,"unknown");
+		strcat(line,"\r\n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,switch_code);
+		strcat(line,"\r\n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,switch_name);
+		strcat(line,"\r\n");
+		fwrite(line,strlen(line),1,fp);
+		memset(line,'0',64);
+		a_id=a_id+1;
+		sprintf(str_a_id,"%03d",a_id);
+		strcpy(line,str_a_id);
+		strcat(line,";");
+		strcat(line,rom_position);
+		strcat(line,"\r\n");
+		fwrite(line,strlen(line),1,fp);
+	}
+	fclose(fp);
+	result=1;
+	
+	return result;	
+}
+int write_wifi(char *file,char *lamp_code,char *wifi_ap,char *wifi_pwd)
+{
+	char last[3]="\r\n";
+	char *buf=(char *)malloc(strlen(lamp_code)+2+strlen(wifi_ap)+2+strlen(wifi_pwd)+2+1);
+	memset(buf,'\0',strlen(lamp_code)+2+strlen(wifi_ap)+2+strlen(wifi_pwd)+2+1);
+	strcpy(buf,lamp_code);
+	strcat(buf,"\r\n");
+	strcat(buf,wifi_ap);
+	strcat(buf,"\r\n");	
+	strcat(buf,wifi_pwd);
+	strcat(buf,"\r\n");
+	FILE *fp=fopen(file,"w");
+	fwrite(buf,strlen(buf),1,fp);	
+	fclose(fp);
+	return 1;
+}
 int write_alarm(char *file,int found,char *alarm_id,char *alarm_time,char *alarm_freq,char *alarm_vol,char *alarm_blance,char *alarm_change,char *alarm_change_freq)
 {
 	char buf[256]={0};
@@ -1915,12 +2161,280 @@ int main(int argc, char *argv[])
 							strcat(text_out,"can not open file");
 					}
 					printf(LOG_PREFX"text out %s\n",text_out);
+			}
+			else if(data.text[2]=='3' && data.text[3]=='1')
+			{
+				char buf[25]={0};
+				char alarm_id[10]={0};
+				len=strlen(FILE_PATH_NAME);
+				file_name[len]=data.text[7];
+				file_name[len+1]=data.text[8];
+				strcat(file_name,".txt");
+				printf(LOG_PREFX"cmd 25 to open %s\n",file_name);
+				int found=0;
+				strcpy(text_out,"d;31;w");
+				int i;
+				int file_line=get_file_lines(file_name);
+				if(file_line==0 || ((file_line%FILE_LAMP_INFO_LINES_RECORD)!=0))
+				{
+					strcat(text_out,"unknown");
 				}
 				else
-					strcpy(text_out,"msg.text is wrong,please add \" \"");
-				send_msg(msgid,TYPE_FILE_TO_MAIN,FILE_TO_MAIN,text_out);
+				{
+					FILE *fp=open_file(file_name);
+					if(fp!=NULL)
+					{
+						for(i=0;i<file_line;i=i+FILE_LAMP_INFO_LINES_RECORD)
+						{
+							strcat(text_out,";");
+							if(read_file_line(fp,i,1,buf))
+							{
+								strcat(text_out,buf);
+								strcat(text_out,";");
+							}
+							else
+								strcat(text_out,"unknown;");
+							if(read_file_line(fp,i+1,1,buf))
+							{
+								strcat(text_out,buf);
+								strcat(text_out,";");
+							}
+							else
+								strcat(text_out,"unknown;");
+							if(read_file_line(fp,i+3,1,buf))
+							{
+								strcat(text_out,buf);
+								strcat(text_out,";");
+							}
+							else
+								strcat(text_out,"unknown;");
+							if(read_file_line(fp,i+4,1,buf))
+							{
+								strcat(text_out,buf);
+							}
+							else
+								strcat(text_out,"unknown;");
+						}
+						close_file(fp);
+					}
+					else
+						strcat(text_out,"can not open file");
+				}
+				printf(LOG_PREFX"text out %s\n",text_out);
+			}
+			else if(data.text[2]=='3' && data.text[3]=='2')
+			{
+				char buf[25]={0};
+				char alarm_id[10]={0};
+				len=strlen(FILE_PATH_NAME);
+				file_name[len]=data.text[7];
+				file_name[len+1]=data.text[8];
+				strcat(file_name,".txt");
+				printf(LOG_PREFX"cmd 25 to open %s\n",file_name);
+				int found=0;
+				strcpy(text_out,"d;32;w");
+				int i;
+				int file_line=get_file_lines(file_name);
+				if(file_line==0 || ((file_line%FILE_LAMP_STATUS_LINES_RECORD)!=0))
+				{
+					strcat(text_out,"unknown");
+				}
+				else
+				{
+					FILE *fp=open_file(file_name);
+					if(fp!=NULL)
+					{
+						for(i=0;i<file_line;i=i+FILE_LAMP_STATUS_LINES_RECORD)
+						{
+							strcat(text_out,";");
+							if(read_file_line(fp,i,1,buf))
+							{
+								strcat(text_out,buf);
+								strcat(text_out,";");
+							}
+							else
+								strcat(text_out,"unknown;");
+							if(read_file_line(fp,i+2,1,buf))
+							{
+								strcat(text_out,buf);
+								strcat(text_out,";");
+							}
+							else
+								strcat(text_out,"unknown;");
+							if(read_file_line(fp,i+3,1,buf))
+							{
+								strcat(text_out,buf);
+								strcat(text_out,";");
+							}
+							else
+								strcat(text_out,"unknown;");
+							if(read_file_line(fp,i+4,1,buf))
+							{
+								strcat(text_out,buf);
+							}
+							else
+								strcat(text_out,"unknown;");
+						}
+						close_file(fp);
+					}
+					else
+						strcat(text_out,"can not open file");
+				}
+				printf(LOG_PREFX"text out %s\n",text_out);
+			}
+			else if(data.text[2]=='3' && data.text[3]=='3')
+			{
+				int found=0;
+				char buf[100]={0};
+				char lamp_id[20]={0};
+				char lamp_code[20]={0};
+				char lamp_name[20]={0};
+				char rom_position[20]={0};
+				char wifi_ap[20]={0};
+				char wifi_pwd[20]={0};
+				char date_timeset[20]={0};
+				int i=8,j=0,commandid_pos=0;
+				len=strlen(FILE_PATH_NAME);
+				file_name[len]=data.text[5];
+				file_name[len+1]=data.text[6];
+				strcat(file_name,".txt");
+				printf("try to open %s\n",file_name);
+				int file_line=get_file_lines(file_name);
+				while(data.text[i]!='\0' && data.text[i]!=';')
+					i++;
+				memcpy(lamp_id,data.text+8,i-8);
+				j=i++;
+				while(data.text[i]!='\0' && data.text[i]!=';')
+					i++;
+				memcpy(lamp_code,data.text+j+1,i-j-1);
+				j=i++;
+				while(data.text[i]!='\0' && data.text[i]!=';')
+					i++;
+				memcpy(lamp_name,data.text+j+1,i-j-1);
+				j=i++;
+				while(data.text[i]!='\0' && data.text[i]!=';')
+					i++;
+				memcpy(rom_position,data.text+j+1,i-j-1);
+				j=i++;
+				while(data.text[i]!='\0' && data.text[i]!=';')
+					i++;
+				memcpy(wifi_ap,data.text+j+1,i-j-1);
+				j=i++;
+				while(data.text[i]!='\0' && data.text[i]!=';')
+					i++;
+				memcpy(wifi_pwd,data.text+j+1,i-j-1);
+				j=i++;
+				while(data.text[i]!='\0' && data.text[i]!=';')
+					i++;
+				memcpy(date_timeset,data.text+j+1,i-j-1);
+				commandid_pos=i;
+				FILE *fp=open_file(file_name);
+				if(fp!=NULL)
+				{
+					for(i=0;i<file_line;i=i+FILE_LAMP_INFO_LINES_RECORD)
+					{
+						if(read_file_line(fp,i,0,buf));
+						{
+								if(strncmp(buf,lamp_id,strlen(buf))==0)
+								{
+									found=1;
+									break;
+								}
+						}
+					}
+					close_file(fp);
+				}
+				else
+					strcat(text_out,"can not open file");
+				if(data.text[5]=='b')
+					strcpy(text_out,"g;33;b;0");
+				else
+				{
+					strcpy(text_out,"g;33;w;0");
+					strcat(text_out,data.text+commandid_pos);
+				}
+				printf(LOG_PREFX"\nlamp_id %s \nlamp_code %s \nlamp_name %s \nrom_position %s \nwifi_ap %s \nwifi_pwd %s \ndatetime_sets %s \n",lamp_id,lamp_code,lamp_name,rom_position,wifi_ap,wifi_pwd,date_timeset);
+				if(strlen(lamp_code)!=0 &&
+					strlen(lamp_name)!=0 &&
+					strlen(rom_position)!=0 &&
+					strlen(wifi_ap)!=0 &&
+					strlen(wifi_pwd)!=0 &&
+					strlen(date_timeset)!=0)
+				{
+					printf(LOG_PREFX"going to writ_lamp %s\n",file_name);
+					write_lamp(file_name,found,lamp_id,lamp_code,lamp_name,rom_position);
+				}
+				file_name[len]='1';
+				file_name[len+1]='0';
+				write_wifi(file_name,lamp_code,wifi_ap,wifi_pwd);
+			}
+			else if(data.text[2]=='3' && data.text[3]=='4')
+			{
+				int found=0;
+				char buf[100]={0};
+				char switch_id[20]={0};
+				char switch_code[20]={0};
+				char switch_name[20]={0};
+				char rom_position[20]={0};
+				int i=8,j=0,commandid_pos=0;
+				len=strlen(FILE_PATH_NAME);
+				file_name[len]=data.text[5];
+				file_name[len+1]=data.text[6];
+				strcat(file_name,".txt");
+				int file_line=get_file_lines(file_name);
+				while(data.text[i]!='\0' && data.text[i]!=';')
+					i++;
+				memcpy(switch_id,data.text+8,i-8);
+				j=i++;
+				while(data.text[i]!='\0' && data.text[i]!=';')
+					i++;
+				memcpy(switch_code,data.text+j+1,i-j-1);
+				j=i++;
+				while(data.text[i]!='\0' && data.text[i]!=';')
+					i++;
+				memcpy(switch_name,data.text+j+1,i-j-1);
+				j=i++;
+				while(data.text[i]!='\0' && data.text[i]!=';')
+					i++;
+				memcpy(rom_position,data.text+j+1,i-j-1);
+				commandid_pos=i;
+				FILE *fp=open_file(file_name);
+				if(fp!=NULL)
+				{
+					for(i=0;i<file_line;i=i+FILE_LAMP_INFO_LINES_RECORD)
+					{
+						if(read_file_line(fp,i+3,0,buf));
+						{
+								if(strncmp(buf,switch_id,strlen(buf))==0)
+								{
+									found=1;
+									break;
+								}
+						}
+					}
+					close_file(fp);
+				}
+				else
+					strcat(text_out,"can not open file");
+				if(data.text[5]=='b')
+					strcpy(text_out,"g;34;b;0");
+				else
+				{
+					strcpy(text_out,"g;34;w;0");
+					strcat(text_out,data.text+commandid_pos);
+				}
+				printf(LOG_PREFX"\nswitch_code %s \nswitch_name %s \nrom_position %s \n",switch_code,switch_name,rom_position);
+				if(strlen(switch_code)!=0 &&
+					strlen(switch_name)!=0 &&
+					strlen(rom_position)!=0)
+				write_switch(file_name,found,switch_id,switch_code,switch_name,rom_position);
+			}
+			else
+				strcpy(text_out,"msg.text is wrong,please add \" \"");
 			}
 			
+			
+			send_msg(msgid,TYPE_FILE_TO_MAIN,FILE_TO_MAIN,text_out);
 		}
 		else
 		{
