@@ -1267,7 +1267,7 @@ int main(int argc, char *argv[])
 							else
 							{
 								
-								strcpy(text_out,"d;21;00;");											
+								strcpy(text_out,"d;21;00");											
 								file_name[len]=data.text[5];
 								file_name[len+1]=data.text[6];
 							}
@@ -1281,7 +1281,7 @@ int main(int argc, char *argv[])
 							j++;
 						memcpy(light_id,data.text+10,j-10);
 					}
-					if(data.text[3]!='4')
+					if(data.text[3]!='4' && data.text[3]!='1')
 					strcat(text_out,light_id);
 					int file_line=get_file_lines(file_name);
 					if(file_line==0 || ((file_line%FILE_LIGHT_LINES_RECORD)!=0))
@@ -1439,7 +1439,7 @@ int main(int argc, char *argv[])
 						strcpy(text_out,"d;13;w;");
 						strcat(text_out,mode_id);
 						strcat(text_out,";");
-						strcat(text_out,data.text+i+1);
+						strcat(text_out,data.text+i+3);
 					}
 					printf(LOG_PREFX"text_out is %s\n",text_out);
 				}
@@ -1572,7 +1572,7 @@ int main(int argc, char *argv[])
 						j=i++;
 						while(data.text[i]!='\0' && data.text[i]!=';')
 							i++;
-						memcpy(alarm_time+2,data.text+j,i-j);
+						memcpy(alarm_time+2,data.text+j+1,i-j-1);
 						j=i++;
 						while(data.text[i]!='\0' && data.text[i]!=';')
 							i++;
@@ -2076,7 +2076,7 @@ int main(int argc, char *argv[])
 								else
 									strcat(text_out,"unknown");
 								memset(buf,'\0',25);
-								if(data.text[5]=='m')
+								if(data.text[5]!='m')
 								{
 									strcat(text_out,";");
 									if(read_file_line(fp,i+1,1,buf))
