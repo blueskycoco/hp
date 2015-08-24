@@ -1061,7 +1061,8 @@ int main(int argc, char *argv[])
 					if(data.text[5]!='w')
 					{
 						printf(LOG_PREFX"in normal read\n");
-						strcpy(text_out,data.text+2);						
+						memcpy(text_out,data.text+2,4);
+						strcat(text_out,strrchr(data.text,';'));						
 						strcat(text_out,";");
 						strcpy(music_id,strrchr(data.text,';')+1);
 					}
@@ -1172,7 +1173,10 @@ int main(int argc, char *argv[])
 					if(set_music_like(file_name,music_id,1))
 					{
 						if(data.text[5]!='w')
+						{
 							strcpy(text_out,"g;04;b;0");
+							text_out[5]=data.text[5];
+						}
 						else
 						{
 							strcpy(text_out,"g;04;w;0;");
@@ -1208,7 +1212,10 @@ int main(int argc, char *argv[])
 					if(set_music_like(file_name,music_id,0))
 					{
 						if(data.text[5]!='w')
+						{
 							strcpy(text_out,"g;05;b;0");
+							text_out[5]=data.text[5];
+						}
 						else
 						{
 							strcpy(text_out,"g;05;w;0;");
@@ -1879,7 +1886,7 @@ int main(int argc, char *argv[])
 									strcpy(text_out,"g;24;w;");
 									strcat(text_out,buf);
 									strcat(text_out,";");
-									strcat(text_out,strrchr(data.text,'?')+1);
+									strcat(text_out,strrchr(data.text,'?')+2);
 								}
 								close_file(fp);
 							}
