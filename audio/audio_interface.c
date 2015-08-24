@@ -226,9 +226,9 @@ void set_vol(int vol)
 	char cmd[256]={0};
 	if(vol<80)
 		vol=80;
-	if(vol>127)/*amixer cset numid=5,iface=MIXER,name='Headphone Playback Volume'*/
+	if(vol>127)/*amixer cset numid=5,iface=MIXER,name='Headphone Playback Volume'*//*amixer cset numid=7,iface=MIXER,name='Speaker Playback Volume'*/
 		vol=127;
-	sprintf(cmd,"amixer cset numid=5,iface=MIXER,name=\'Headphone Playback Volume\' %d", vol);
+	sprintf(cmd,"amixer cset numid=7,iface=MIXER,name=\'Speaker Playback Volume\' %d", vol);
 	printf(LOG_PREFX"cmd is %s",cmd);
 	system(cmd);
 }
