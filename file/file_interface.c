@@ -2406,11 +2406,56 @@ int main(int argc, char *argv[])
 					strlen(rom_position)!=0)
 				write_switch(file_name,found,switch_id,switch_code,switch_name,rom_position);
 			}
+			else if(data.text[0]=='a' && data.text[2]=='x' && data.text[3]=='x')
+			{//35 tmp data to store
+				char *tmp_buf=NULL;
+				FILE *fp=fopen("/tmp/store.txt", "rb");
+				fseek(fp,0L,SEEK_END);
+				int flen=ftell(fp);
+				fseek(fp,0L,SEEK_SET);
+				tmp_buf=(char *)malloc(flen+1+strlen(data.text+5)+2);
+				memset(tmp_buf,'\0',flen+1+2+strlen(data.text+5));
+				fread(tmp_buf,flen,1,fp);
+				fclose(fp);
+				printf(LOG_PREFX"ori \n%s",tmp_buf);
+				fp=fopen("/tmp/store.txt", "wb");
+				strcat(tmp_buf,data.text+5);
+				strcat(tmp_buf,"\r\n");
+				printf(LOG_PREFX"to store \n%s",tmp_buf);
+				fwrite(tmp_buf,strlen(data.text+5)+2+flen,1,fp);
+				fclose(fp);
+				//memcpy(text_out,data.text,4);
+			}
+			else if(data.text[0]=='b' && data.text[2]=='x' && data.text[3]=='x')
+			{//37 read tmp data from store
+				char *tmp_buf=NULL;
+				FILE *fp=fopen("/tmp/store.txt", "rb");
+				fseek(fp,0L,SEEK_END);
+				int flen=ftell(fp);
+				fseek(fp,0L,SEEK_SET);
+				strcpy(text_out,"e;");
+				if(flen!=0)
+				{
+					char *line=NULL;
+					size_t len;
+					tmp_buf=(char *)malloc(flen+1);				
+					memset(tmp_buf,'\0',flen+1);
+					getline(&line, &len, fp);
+					line[strlen(line)-2]='\0';
+					strcat(text_out,line);
+					fread(tmp_buf,flen,1,fp);
+					fclose(fp);
+					fp=fopen("/tmp/store.txt", "wb");
+					fwrite(tmp_buf,strlen(tmp_buf),1,fp);
+				}
+				else
+					strcat(text_out,"no data found");
+				fclose(fp);
+			}
 			else
 				strcpy(text_out,"msg.text is wrong,please add \" \"");
-			}
-			
-			
+			}		
+			if(!(data.text[0]=='a' && data.text[2]=='x' && data.text[3]=='x'))
 			send_msg(msgid,TYPE_FILE_TO_MAIN,FILE_TO_MAIN,text_out);
 		}
 		else
