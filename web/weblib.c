@@ -421,7 +421,7 @@ char * http_post(const char *url,const char *post_str,int timeout){
         printf(LOG_PREFX"http_parse_url failed!\n");  
         return NULL;  
     }  
-    printf(LOG_PREFX"host_addr : %s\tfile:%s\t,%d\n",host_addr,file,port);  
+    //printf(LOG_PREFX"host_addr : %s\tfile:%s\t,%d\n",host_addr,file,port);  
   
     socket_fd = http_tcpclient_create(host_addr,port,timeout);  
     if(socket_fd < 0){  

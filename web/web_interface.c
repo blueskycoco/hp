@@ -205,6 +205,7 @@ int main(int argc, char *argv[])
 		while(1)
 		{
 			//printf(LOG_PREFX"waiting MainCtlSystem cmd...\n");
+			memset(data.text,0,512);
 			if(msgrcv(msgid, (void*)&data, sizeof(struct msg_st)-sizeof(long int), TYPE_MAIN_TO_WEB , 0)>=0)
 			{			
 				memset(errorMsg,'\0',256);
@@ -240,6 +241,10 @@ int main(int argc, char *argv[])
 					}
 					else
 					{
+						memset(message,0,256);
+						memset(commandid,0,256);
+						memset(lampcode,0,256);
+						memset(text,0,256);
 						get_param(data.text,message,commandid,&websiteid,&timeout,lampcode,text);
 						printf(LOG_PREFX"input %s\nmessage %s\ncommandid %s\nwebsiteid %d\ntimeout %d\nlampcode %s\ntext %s\n",
 							data.text,message,commandid,websiteid,timeout,lampcode,text);
