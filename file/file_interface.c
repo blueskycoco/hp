@@ -2416,17 +2416,28 @@ int main(int argc, char *argv[])
 			else if(data.text[0]=='a' && data.text[2]=='x' && data.text[3]=='x')
 			{//35 tmp data to store
 				char *tmp_buf=NULL;
+				int flen=0;
 				FILE *fp=fopen("/tmp/store.txt", "rb");
-				fseek(fp,0L,SEEK_END);
-				int flen=ftell(fp);
-				fseek(fp,0L,SEEK_SET);
-				tmp_buf=(char *)malloc(flen+1+strlen(data.text+5)+2);
-				memset(tmp_buf,'\0',flen+1+2+strlen(data.text+5));
-				fread(tmp_buf,flen,1,fp);
-				fclose(fp);
-				printf(LOG_PREFX"ori \n%s",tmp_buf);
+				if(fp!=NULL)
+				{
+					fseek(fp,0L,SEEK_END);
+					flen=ftell(fp);
+					fseek(fp,0L,SEEK_SET);
+					tmp_buf=(char *)malloc(flen+1+strlen(data.text+5)+2);
+					memset(tmp_buf,'\0',flen+1+2+strlen(data.text+5));
+					fread(tmp_buf,flen,1,fp);
+					fclose(fp);
+					printf(LOG_PREFX"ori \n%s",tmp_buf);
+					strcat(tmp_buf,data.text+5);
+				}
+				else
+				{
+					flen=0;
+					tmp_buf=(char *)malloc(1+strlen(data.text+5)+2);
+					memset(tmp_buf,'\0',1+2+strlen(data.text+5));
+					strcpy(tmp_buf,data.text+5);
+				}
 				fp=fopen("/tmp/store.txt", "wb");
-				strcat(tmp_buf,data.text+5);
 				strcat(tmp_buf,"\r\n");
 				printf(LOG_PREFX"to store \n%s",tmp_buf);
 				fwrite(tmp_buf,strlen(data.text+5)+2+flen,1,fp);
@@ -2455,8 +2466,6 @@ int main(int argc, char *argv[])
 					fp=fopen("/tmp/store.txt", "wb");
 					fwrite(tmp_buf,strlen(tmp_buf),1,fp);
 				}
-				else
-					strcat(text_out,"no data found");
 				fclose(fp);
 			}
 			else
