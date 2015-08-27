@@ -40,7 +40,7 @@
 #define CMD_25_REMINDER_ON_ARM			"r;25;03;"
 #define CMD_28_REMINDER_ON_ARM			"r;28;b;04"
 
-#define FILE_PATH_NAME "/tmp/"
+#define FILE_PATH_NAME "/home/"
 
 #define FILE_MUSIC_NAME_LINE	0
 #define FILE_MUSIC_FILE_NAME_LINE	1
