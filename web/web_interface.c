@@ -62,7 +62,7 @@ void get_param(char *input,char *message,char *commandid,int *websiteid,int *tim
 	memset(message,'\0',sizeof(message));
 	memset(commandid,'\0',sizeof(commandid)); 				
 	strcpy(message,"message=");
-	strcpy(commandid,"commandID=");
+	strcpy(commandid,"commandId=");
 	*timeout=-1;
 	*websiteid=-1;
 	//01;w;s;1;12345678;9f5d7b29-1c03-4c29-90af-ae7cd354b6ae;2;3
@@ -75,7 +75,7 @@ void get_param(char *input,char *message,char *commandid,int *websiteid,int *tim
 	 j=i;
 	 while(input[i]!=';' && i>0)
 	 	i--;
-	 memcpy(commandid+strlen("commandID="),input+i+1,j-i);	 
+	 memcpy(commandid+strlen("commandId="),input+i+1,j-i);	 
 	 memcpy(message+strlen("message="),input,i);
 	 i--;
 	 j=i;

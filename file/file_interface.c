@@ -2468,6 +2468,59 @@ int main(int argc, char *argv[])
 				}
 				fclose(fp);
 			}
+			else if(data.text[2]=='6' && data.text[3]=='2')
+			{//62
+				char buf[25]={0};
+				len=strlen(FILE_PATH_NAME);
+				file_name[len]=data.text[7];
+				file_name[len+1]=data.text[8];
+				strcat(file_name,".txt");
+				printf(LOG_PREFX"cmd 62 to open %s\n",file_name);
+				operation=0;
+				memcpy(text_out,data.text,6);
+				text_out[0]='d';
+				int file_line=get_file_lines(file_name);
+				if(file_line==0 || ((file_line%FILE_11_LINES_RECORD)!=0))
+				{
+					strcat(text_out,";unknown");
+					strcat(text_out,";unknown");
+					strcat(text_out,";unknown");
+					strcat(text_out,";unknown");
+				}
+				else
+				{
+					int i;
+					FILE *fp=open_file(file_name);
+					if(fp!=NULL)
+					{
+						for(i=0;i<file_line;i=i+FILE_11_LINES_RECORD)
+						{
+							strcat(text_out,";");
+							if(read_file_line(fp,i,0,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							memset(buf,'\0',25);
+							strcat(text_out,";");
+							if(read_file_line(fp,i+1,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+							memset(buf,'\0',25);
+							strcat(text_out,";");
+							if(read_file_line(fp,i+2,1,buf))
+								strcat(text_out,buf);
+							else
+								strcat(text_out,"unknown");
+						}
+						close_file(fp);
+					}
+					else
+						strcat(text_out,"can not open file");
+					printf(LOG_PREFX"11 list %s\n",text_out);
+				}
+				memset(file_name,'\0',256);
+			}
 			else
 				strcpy(text_out,"msg.text is wrong,please add \" \"");
 			}		

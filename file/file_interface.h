@@ -56,6 +56,8 @@
 #define FILE_LAMP_INFO_LINES_RECORD 6
 #define FILE_LAMP_STATUS_LINES_RECORD 5
 #define FILE_LAMP_WIFI_LINES_RECORD	3
+#define FILE_11_LINES_RECORD	3
+
 struct msg_st
 {  
 	long int msg_type; 
