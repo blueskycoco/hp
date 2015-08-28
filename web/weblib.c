@@ -542,5 +542,27 @@ char *doit(char *text,const char *item_str)
 	}
 	return out;
 }
+char *doit_data(char *text,const char *item_str)
+{
+	char *out=NULL;cJSON *json,*item_json;
+	
+	item_json=cJSON_Parse(text);
+	if (!item_json) {printf(LOG_PREFX"Error before: [%s]\n",cJSON_GetErrorPtr());}
+	else
+	{
+		if (item_json)
+ 		{	 		    
+			int nLen = strlen(item_json->valuestring);
+		    printf("%s ,%d %s\n",item_str,nLen,item_json->valuestring);					
+			out=(char *)malloc(nLen+1);
+			memset(out,'\0',nLen+1);
+			memcpy(out,item_json->valuestring,nLen);
+		}
+ 		else
+			printf(LOG_PREFX"get %s failed\n",item_str);
+ 		cJSON_Delete(json);	
+	}
+	return out;
+}
 
 

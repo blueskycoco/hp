@@ -46,6 +46,10 @@ int send_web(char *url,char *commandid,char *message,int timeout)
 		{
 			printf(LOG_PREFX"code is %d\n",res);
 				result=1;
+				if(strstr(url,"achieve")!=0)
+				{
+
+				}
 		}
 		free(rcv);
 	}
@@ -263,6 +267,7 @@ int main(int argc, char *argv[])
 							else
 								strcat(errorMsg,";failed");
 						}
+							if(strstr(g_url[websiteid],"achieve")!=0)
 							send_msg(msgid,TYPE_WEB_TO_MAIN,WEB_TO_MAIN,errorMsg);
 					}
 				}
