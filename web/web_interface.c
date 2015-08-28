@@ -31,11 +31,14 @@ int send_msg(int msgid,unsigned char msg_type,unsigned char id,unsigned char *te
 	}
 	printf(LOG_PREFX"send msg done\n");
 }
-int send_web(char *url,char *commandid,char *message,int timeout)
+int send_web(int msgid,char *url,char *commandid,char *message,int timeout)
 {
 	char request[1024]={0};
 	int result=0;
-	sprintf(request,"%s?%s&%s",url,commandid,message);
+	if(strstr(url,"achieve")!=0)
+		sprintf(request,"%s?%s&%s;%s",url,commandid,message,strchr(commandid,'=')+1);
+	else
+		sprintf(request,"%s?%s&%s",url,commandid,message);
 	printf(LOG_PREFX"send web %s\n",request);
 	char *rcv=http_get(request,timeout);
 	if(rcv!=NULL)
@@ -48,7 +51,11 @@ int send_web(char *url,char *commandid,char *message,int timeout)
 				result=1;
 				if(strstr(url,"achieve")!=0)
 				{
-
+					char data=doit_data(rcv,"data");
+					if(data)
+					{
+						send_msg(msgid,TYPE_WEB_TO_MAIN,WEB_TO_MAIN,data);
+					}
 				}
 		}
 		free(rcv);
@@ -252,9 +259,9 @@ int main(int argc, char *argv[])
 						get_param(data.text,message,commandid,&websiteid,&timeout,lampcode,text);
 						printf(LOG_PREFX"input %s\nmessage %s\ncommandid %s\nwebsiteid %d\ntimeout %d\nlampcode %s\ntext %s\n",
 							data.text,message,commandid,websiteid,timeout,lampcode,text);
-						if(strstr(g_url[websiteid],"synch")!=0)
+						if(strstr(g_url[websiteid],"synch")!=0||strstr(g_url[websiteid],"achieve")!=0)
 						{
-							if(send_web(g_url[websiteid],lampcode,text,timeout))
+							if(send_web(msgid,g_url[websiteid],lampcode,text,timeout))
 								strcat(errorMsg,";done");
 							else
 								strcat(errorMsg,";failed");
@@ -262,7 +269,7 @@ int main(int argc, char *argv[])
 						}
 						else
 						{
-							if(send_web(g_url[websiteid],commandid,message,timeout))
+							if(send_web(msgid,g_url[websiteid],commandid,message,timeout))
 								strcat(errorMsg,";done");
 							else
 								strcat(errorMsg,";failed");
