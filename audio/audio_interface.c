@@ -700,7 +700,7 @@ int main(int argc, char *argv[])
 								}
 								else
 									strcpy(play_file,data.text+7);
-								if(playback(msgid,data.text+7,0,0)==1)
+								if(playback(msgid,play_file,0,0)==1)
 								{
 									strcat(text_out,"1");
 								}
