@@ -51,10 +51,11 @@ int send_web(int msgid,char *url,char *commandid,char *message,int timeout)
 				result=1;
 				if(strstr(url,"achieve")!=0)
 				{
-					char data=doit_data(rcv,"data");
+					char *data=doit_data(rcv,"data");
 					if(data)
 					{
 						send_msg(msgid,TYPE_WEB_TO_MAIN,WEB_TO_MAIN,data);
+						free(data);
 					}
 				}
 		}
@@ -274,8 +275,9 @@ int main(int argc, char *argv[])
 							else
 								strcat(errorMsg,";failed");
 						}
-							if(strstr(g_url[websiteid],"achieve")!=0)
-							send_msg(msgid,TYPE_WEB_TO_MAIN,WEB_TO_MAIN,errorMsg);
+							//if(strstr(g_url[websiteid],"achieve")!=0)
+							//send_msg(msgid,TYPE_WEB_TO_MAIN,WEB_TO_MAIN,errorMsg);
+						
 					}
 				}
 				else
